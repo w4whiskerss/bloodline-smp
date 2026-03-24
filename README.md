@@ -12,7 +12,6 @@
 
 [![YouTube](https://img.shields.io/badge/YouTube-W4Whiskerss-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@W4Whiskerss)
 [![Discord](https://img.shields.io/badge/Discord-Private%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/NjZg46TRmf)
-[![GitHub](https://img.shields.io/badge/GitHub-bloodline--smp-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/w4whiskerss/bloodline-smp)
 
 <br />
 <br />
@@ -116,9 +115,6 @@ Example:
 
 </details>
 
-Full Discord-ready ability write-up:
-[docs/discord-bloodline-info.md](docs/discord-bloodline-info.md)
-
 ---
 
 ## Controls
@@ -158,36 +154,6 @@ Full Discord-ready ability write-up:
 
 ---
 
-## Build
-
-### Server plugin
-
-```powershell
-.\gradlew.bat jar
-```
-
-Output:
-
-- `build/libs/bloodline-smp-2.0.19.jar`
-
-### Local test server
-
-```powershell
-.\gradlew.bat runServer
-```
-
-### Client mod
-
-```powershell
-cmd /c gradlew.bat -p client-mod build
-```
-
-Output:
-
-- `client-mod/build/libs/bloodline-hotkeys-1.0.1.jar`
-
----
-
 ## Config
 
 Generated config path on the server:
@@ -209,7 +175,6 @@ Includes settings for:
 
 - YouTube: [@W4Whiskerss](https://www.youtube.com/@W4Whiskerss)
 - Discord: [Private Server](https://discord.gg/NjZg46TRmf)
-- GitHub: [bloodline-smp](https://github.com/w4whiskerss/bloodline-smp)
 
 ---
 
