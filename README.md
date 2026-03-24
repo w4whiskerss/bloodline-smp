@@ -1,15 +1,15 @@
 <div align="center">
 
-<img width="100%" alt="Bloodline SMP Banner" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:111827,20:1E3A8A,55:C2410C,100:6D28D9&text=Bloodline%20SMP&fontSize=56&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=PaperMC%20PvP%20Bloodline%20System&descAlignY=60&descSize=20" />
+<img width="100%" alt="Bloodline SMP Banner" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:120608,25:3b0a0f,55:7f1d1d,80:b91c1c,100:450a0a&text=Bloodline%20SMP&fontSize=56&fontColor=fff7f7&animation=fadeIn&fontAlignY=38&desc=PaperMC%20PvP%20Bloodline%20System&descAlignY=60&descSize=20" />
 
 <br />
 
-[![repo](https://img.shields.io/badge/repo-bloodlinesmp-0f172a?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
-[![live version](https://img.shields.io/badge/version-2.0.17-f97316?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
-[![paper](https://img.shields.io/badge/paper-1.21.11-2563eb?style=flat-square)](https://papermc.io/)
-[![java](https://img.shields.io/badge/java-21-22c55e?style=flat-square)](https://adoptium.net/)
-[![focus](https://img.shields.io/badge/focus-bloodline%20combat-a855f7?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
-[![style](https://img.shields.io/badge/style-public%20smp%20ready-06b6d4?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+[![repo](https://img.shields.io/badge/repo-bloodlinesmp-1f0a0d?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+[![live version](https://img.shields.io/badge/version-2.0.18-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
+[![paper](https://img.shields.io/badge/paper-1.21.11-7f1d1d?style=flat-square)](https://papermc.io/)
+[![java](https://img.shields.io/badge/java-21-991b1b?style=flat-square)](https://adoptium.net/)
+[![focus](https://img.shields.io/badge/focus-bloodline%20combat-b91c1c?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+[![style](https://img.shields.io/badge/style-blood%20red%20theme-450a0a?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
 
 <br />
 
@@ -155,7 +155,7 @@ Full Discord-ready ability write-up:
 
 Output:
 
-- `build/libs/bloodline-smp-2.0.17.jar`
+- `build/libs/bloodline-smp-2.0.18.jar`
 
 ### Local test server
 
