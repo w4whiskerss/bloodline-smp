@@ -1,0 +1,199 @@
+grace:
+  default-seconds: 300
+
+testing:
+  enable-test-commands: true
+
+admin-panel:
+  enabled: true
+  allowed-usernames:
+    - your_name_here
+
+first-join-selection:
+  chances:
+    aqua: 35.0
+    earthian: 30.0
+    spartan: 20.0
+    voider: 15.0
+
+discord-webhook:
+  enabled: false
+  url: ""
+
+drops:
+  trait-potion-chance: 0.25
+
+bloodlines:
+  aqua:
+    water-strength-amplifier-per-level: 1
+    dolphins-grace-amplifier-at-level-5: 1
+    water-dash:
+      cooldown-seconds: 60
+      cooldown-reduction-per-level: 4
+      water-strength: 2.1
+      land-strength: 1.25
+      strength-per-level: 0.12
+      hit-radius: 1.5
+      hit-radius-per-level: 0.1
+      damage: 4.0
+      damage-per-level: 0.8
+      knockback: 1.15
+      knockback-per-level: 0.08
+    suffocation-curse:
+      duration-seconds: 10
+      duration-seconds-per-level: 1
+      cooldown-seconds: 180
+      cooldown-reduction-per-level: 10
+      range: 24.0
+      range-per-level: 1.5
+      damage-per-second: 1.0
+      damage-per-second-per-level: 0.35
+      air-loss-per-second: 45
+      slowness-amplifier-at-level-5: 2
+    tidal-surge:
+      duration-seconds: 10
+      duration-seconds-per-level: 1
+      cooldown-seconds: 300
+      cooldown-reduction-per-level: 12
+      radius: 5.0
+      radius-per-level: 0.35
+      damage: 3.0
+      damage-per-level: 0.75
+      knockback: 1.2
+      knockback-per-level: 0.08
+      strength-amplifier-at-level-5: 2
+      speed-amplifier-at-level-5: 1
+      dolphins-grace-amplifier-at-level-5: 1
+      teleport-water-world:
+        enabled: false
+        world-name: "bloodline_aqua_realm"
+        spawn-y: 65
+
+  spartan:
+    passive:
+      strength-amplifier-at-level-5: 1
+    fireball:
+      cooldown-seconds: 120
+      cooldown-reduction-per-level: 8
+      hold-seconds: 15
+      speed: 1.5
+      explosion-power: 1.8
+      speed-per-level: 0.1
+      explosion-power-per-level: 0.35
+    flaming-hands:
+      duration-seconds: 180
+      duration-seconds-per-level: 15
+      burn-seconds: 300
+      burn-seconds-per-level: 30
+      damage-per-second: 1.0
+      damage-per-second-per-level: 0.35
+      cooldown-seconds: 600
+      cooldown-reduction-per-level: 30
+    hell-dominion:
+      duration-seconds: 10
+      duration-seconds-per-level: 1
+      cooldown-seconds: 300
+      cooldown-reduction-per-level: 12
+      strength-amplifier-at-level-5: 2
+      speed-amplifier-at-level-5: 1
+      aura-radius: 4.0
+      aura-radius-per-level: 0.2
+      aura-damage-per-second: 1.0
+      aura-damage-per-second-per-level: 0.25
+      hit-burn-seconds: 6
+      hit-burn-seconds-per-level: 1
+      nether-send-radius: 5.0
+      nether-send-max-targets: 2
+      nether-send-preferred-y: 80
+      teleport-fire-world:
+        enabled: false
+        world-name: "bloodline_spartan_realm"
+        spawn-y: 80
+
+  earthian:
+    passive:
+      regen-after-seconds: 20
+      regen-after-seconds-reduction-per-level: 2
+      knockback-multiplier: 0.6
+      knockback-multiplier-improvement-per-level: 0.05
+      fall-damage-multiplier: 0.5
+      fall-damage-multiplier-improvement-per-level: 0.05
+      resistance-amplifier-at-level-5: 1
+    ground-slam:
+      launch-power: 1.9
+      launch-power-per-level: 0.12
+      slam-gravity: 1.6
+      radius: 4.5
+      radius-per-level: 0.35
+      damage: 5.0
+      damage-per-level: 1.0
+      damage-per-fall-block: 0.6
+      cooldown-seconds: 90
+      cooldown-reduction-per-level: 8
+    root-trap:
+      radius: 5.0
+      radius-per-level: 0.35
+      duration-ticks: 100
+      duration-ticks-per-level: 10
+      slowness-amplifier-at-level-5: 4
+      mining-fatigue-amplifier-at-level-5: 2
+      cooldown-seconds: 180
+      cooldown-reduction-per-level: 15
+    worldbreaker:
+      duration-seconds: 8
+      duration-seconds-per-level: 1
+      cooldown-seconds: 300
+      cooldown-reduction-per-level: 12
+      radius: 12.0
+      radius-per-level: 0.9
+      damage: 12.0
+      damage-per-level: 1.8
+      knockback: 2.8
+      knockback-per-level: 0.18
+      resistance-amplifier-at-level-5: 2
+      slow-amplifier-at-level-5: 3
+      tnt-count: 12
+      tnt-count-per-level: 2
+      tnt-spawn-radius: 4.0
+      tnt-spawn-radius-per-level: 0.35
+      tnt-fuse-ticks: 32
+      explosion-power: 4.0
+      explosion-power-per-level: 0.45
+
+  voider:
+    passive:
+      amplifier-at-level-5: 1
+    void-blink:
+      cooldown-seconds: 45
+      cooldown-reduction-per-level: 3
+      distance: 8.0
+      distance-per-level: 0.5
+      follow-up-window-seconds: 3
+      bonus-damage: 3.0
+      bonus-damage-per-level: 0.75
+      knockback: 0.85
+      knockback-per-level: 0.06
+    void-flight:
+      duration-seconds: 300
+      duration-seconds-per-level: 30
+      cooldown-seconds: 1800
+      cooldown-reduction-per-level: 60
+    void-send:
+      range: 35.0
+      range-per-level: 2.0
+      random-radius: 900
+      random-radius-per-level: 75
+      recharge-hours: 12
+
+  universal:
+    rift-dash:
+      cooldown-seconds: 45
+      cooldown-reduction-per-level: 3
+    blood-fusion:
+      cooldown-seconds: 240
+      cooldown-reduction-per-level: 10
+      duration-seconds: 8
+    ascension:
+      cooldown-seconds: 360
+      cooldown-reduction-per-level: 15
+      duration-seconds: 10

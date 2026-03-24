@@ -1,0 +1,53 @@
+name: BloodlineSMP
+version: 2.0.15
+main: dev.zahen.bloodline.BloodlinePlugin
+api-version: '1.21'
+author: w4whiskers
+commands:
+  bloodline:
+    description: Opens the Bloodline GUI
+    usage: /bloodline
+  bloodlineadmin:
+    description: Opens the Bloodline admin panel
+    usage: /bloodlineadmin
+  ability1:
+    description: Triggers your primary bloodline ability
+    usage: /ability1
+    aliases: [primary]
+  ability2:
+    description: Triggers your secondary bloodline ability
+    usage: /ability2
+    aliases: [secondary]
+  ability3:
+    description: Triggers your special bloodline ability
+    usage: /ability3
+    aliases: [special]
+  bloodlinemod:
+    description: Internal client hotkey handshake
+    usage: /bloodlinemod
+  bloodlinereload:
+    description: Reloads BloodlineSMP config
+    usage: /bloodlinereload
+    permission: bloodline.reload
+  gracestart:
+    description: Starts the grace period
+    usage: /gracestart
+    permission: bloodline.grace
+  gracestop:
+    description: Stops the grace period
+    usage: /gracestop
+    permission: bloodline.grace
+  gracetimeset:
+    description: Sets the grace period duration
+    usage: /gracetimeset <duration>
+    permission: bloodline.grace
+  bloodlinetest:
+    description: Operator testing commands for Bloodline SMP
+    usage: /bloodlinetest <subcommand>
+permissions:
+  bloodline.use:
+    default: true
+  bloodline.grace:
+    default: op
+  bloodline.reload:
+    default: op

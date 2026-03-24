@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+run/
+.tmp/
+.codex/
+
+client-mod/.gradle/
+client-mod/build/
+
+*.log
+eula.txt
+server.properties

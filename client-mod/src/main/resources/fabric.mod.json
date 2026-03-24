@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "bloodline_hotkeys",
+  "version": "${version}",
+  "name": "Bloodline Hotkeys",
+  "description": "Client hotkeys for BloodlineSMP abilities.",
+  "authors": [
+    "w4whiskers"
+  ],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.zahen.bloodlinehotkeys.BloodlineHotkeysClient"
+    ]
+  },
+  "mixins": [
+    "bloodline-hotkeys.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}
