@@ -67,7 +67,7 @@ public final class CustomItems {
         meta.lore(List.of(
                 Component.text("Forged from 5 upgrade potions", NamedTextColor.GRAY),
                 Component.text("and 1 " + type.displayName() + " trait potion.", NamedTextColor.GRAY),
-                Component.text("Used to craft the Universal Bloodline.", NamedTextColor.DARK_GRAY)
+                Component.text("Used to craft the Omni bloodline.", NamedTextColor.DARK_GRAY)
         ));
         tag(meta.getPersistentDataContainer(), TYPE_BLOODLINE_SHARD, type, PlayerProfile.MAX_LEVEL);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -78,9 +78,9 @@ public final class CustomItems {
     public ItemStack createUniversalCore() {
         ItemStack item = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Universal Bloodline", NamedTextColor.LIGHT_PURPLE));
+        meta.displayName(Component.text("Omni", NamedTextColor.LIGHT_PURPLE));
         meta.lore(List.of(
-                Component.text("Right click to unlock the Universal Bloodline.", NamedTextColor.GRAY),
+                Component.text("Right click to unlock Omni.", NamedTextColor.GRAY),
                 Component.text("Crafted from the four bloodline shards.", NamedTextColor.DARK_GRAY)
         ));
         tag(meta.getPersistentDataContainer(), TYPE_UNIVERSAL_CORE, BloodlineType.UNIVERSAL, 1);

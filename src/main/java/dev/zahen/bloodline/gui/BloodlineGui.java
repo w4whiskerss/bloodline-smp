@@ -68,7 +68,7 @@ public final class BloodlineGui {
         lore.add(Component.text("Level: " + level + "/" + PlayerProfile.MAX_LEVEL, NamedTextColor.YELLOW));
 
         if (type == BloodlineType.UNIVERSAL && !profile.owns(BloodlineType.UNIVERSAL)) {
-            lore.add(Component.text("Craft the Universal Bloodline item to unlock it.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.text("Craft the Omni item to unlock it.", NamedTextColor.LIGHT_PURPLE));
         } else if (level > 0) {
             lore.add(Component.text("Click to switch active bloodline.", NamedTextColor.GRAY));
         }

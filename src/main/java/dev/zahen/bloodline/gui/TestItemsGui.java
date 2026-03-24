@@ -35,8 +35,8 @@ public final class TestItemsGui {
                 List.of("Click to get 1 Upgrade Potion")));
         inventory.setItem(46, createLabeledItem(Material.EXPERIENCE_BOTTLE, NamedTextColor.GOLD, "Upgrade Potion x5",
                 List.of("Click to get 5 Upgrade Potions")));
-        inventory.setItem(49, createLabeledItem(Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE, "Universal Bloodline",
-                List.of("Click to get the Universal unlock item")));
+        inventory.setItem(49, createLabeledItem(Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE, "Omni",
+                List.of("Click to get the Omni unlock item")));
         inventory.setItem(53, createLabeledItem(Material.BARRIER, NamedTextColor.RED, "Close",
                 List.of("Close this menu")));
 

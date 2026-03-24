@@ -257,7 +257,7 @@ public final class BloodlineManager {
         BloodlineType type = profile.activeBloodline();
         int level = Math.max(1, profile.activeLevel());
         if (type == BloodlineType.UNIVERSAL) {
-            player.sendActionBar(Component.text("Universal bloodline cannot be bottled.", NamedTextColor.RED));
+            player.sendActionBar(Component.text("Omni cannot be bottled.", NamedTextColor.RED));
             return false;
         }
         if (glassBottle == null || glassBottle.getAmount() <= 0) {
@@ -939,7 +939,7 @@ public final class BloodlineManager {
         removeAllPassives(player);
         getBloodline(BloodlineType.UNIVERSAL).applyPassive(player);
         markDirty(player);
-        player.sendActionBar(Component.text("Universal Bloodline unlocked.", NamedTextColor.LIGHT_PURPLE));
+        player.sendActionBar(Component.text("Omni unlocked.", NamedTextColor.LIGHT_PURPLE));
     }
 
     public void handleDamageTaken(Player player, double originalDamage, org.bukkit.event.entity.EntityDamageEvent event) {

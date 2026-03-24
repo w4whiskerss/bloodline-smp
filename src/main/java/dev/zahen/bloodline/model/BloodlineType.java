@@ -11,7 +11,7 @@ public enum BloodlineType {
     SPARTAN("Spartan", Material.NETHERITE_SWORD, NamedTextColor.GOLD),
     EARTHIAN("Earthian", Material.MOSS_BLOCK, NamedTextColor.GREEN),
     VOIDER("Voider", Material.ENDER_EYE, NamedTextColor.DARK_PURPLE),
-    UNIVERSAL("Universal Bloodline", Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE);
+    UNIVERSAL("Omni", Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE);
 
     private final String displayName;
     private final Material icon;
