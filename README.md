@@ -4,12 +4,9 @@
 
 <br />
 
-[![repo](https://img.shields.io/badge/repo-bloodlinesmp-1f0a0d?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
 [![live version](https://img.shields.io/badge/version-2.0.18-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
 [![paper](https://img.shields.io/badge/paper-1.21.11-7f1d1d?style=flat-square)](https://papermc.io/)
 [![java](https://img.shields.io/badge/java-21-991b1b?style=flat-square)](https://adoptium.net/)
-[![focus](https://img.shields.io/badge/focus-bloodline%20combat-b91c1c?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
-[![style](https://img.shields.io/badge/style-blood%20red%20theme-450a0a?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
 
 <br />
 
@@ -73,35 +70,51 @@ Example:
 
 ---
 
-## Bloodlines
+## Bloodline's
 
-### Aqua
+<details>
+<summary><strong>Aqua</strong></summary>
+
 - Water-based mobility and control
 - Water buffs while submerged
 - Water Dash
 - Suffocation Curse
 - Tidal Surge
 
-### Spartan
+</details>
+
+<details>
+<summary><strong>Spartan</strong></summary>
+
 - Fire-based aggression
 - Permanent Fire Resistance
 - Fireball
 - Flaming Hands
 - Hell Dominion
 
-### Earthian
+</details>
+
+<details>
+<summary><strong>Earthian</strong></summary>
+
 - Tank and area-control bloodline
 - Resistance and anti-knockback passives
 - Ground Slam
 - Root Prison
 - Worldbreaker
 
-### Voider
+</details>
+
+<details>
+<summary><strong>Voider</strong></summary>
+
 - Mobility and chaos bloodline
 - Random daily passive buff
 - Void Blink
 - Void Send
 - Void Flight
+
+</details>
 
 Full Discord-ready ability write-up:
 [docs/discord-bloodline-info.md](docs/discord-bloodline-info.md)
@@ -155,7 +168,7 @@ Full Discord-ready ability write-up:
 
 Output:
 
-- `build/libs/bloodline-smp-2.0.18.jar`
+- `build/libs/bloodline-smp-2.0.19.jar`
 
 ### Local test server
 
