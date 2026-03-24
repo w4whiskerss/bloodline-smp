@@ -78,8 +78,7 @@ public final class BloodlineManager {
             PotionEffectType.NIGHT_VISION,
             PotionEffectType.JUMP_BOOST,
             PotionEffectType.WATER_BREATHING,
-            PotionEffectType.FIRE_RESISTANCE,
-            PotionEffectType.INVISIBILITY
+            PotionEffectType.FIRE_RESISTANCE
     );
     private final NamespacedKey universalRecipeKey;
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -127,6 +126,10 @@ public final class BloodlineManager {
     public void handleJoin(Player player) {
         clientHotkeyPlayers.remove(player.getUniqueId());
         PlayerProfile profile = profile(player);
+        if (profile.activeBloodline() == BloodlineType.VOIDER && !canUseVoider(player)) {
+            profile.setSingleBloodline(rollEligibleInitialBloodline(player), 1);
+            markDirty(player);
+        }
         if (!profile.owns(profile.activeBloodline())) {
             profile.setLevel(profile.activeBloodline(), 1);
         }
@@ -157,10 +160,7 @@ public final class BloodlineManager {
         if (surge != null) {
             endAquaTidalSurge(player, surge, true);
         }
-        HeldFireballState heldFireball = heldFireballs.remove(player.getUniqueId());
-        if (heldFireball != null && heldFireball.fireball().isValid()) {
-            heldFireball.fireball().remove();
-        }
+        heldFireballs.remove(player.getUniqueId());
         HellDominionState dominion = spartanHellDominions.remove(player.getUniqueId());
         if (dominion != null) {
             endHellDominion(player, dominion, true);
@@ -333,28 +333,15 @@ public final class BloodlineManager {
     }
 
     public void prepareSpartanFireball(Player player) {
-        HeldFireballState old = heldFireballs.remove(player.getUniqueId());
-        if (old != null && old.fireball().isValid()) {
-            old.fireball().remove();
-        }
-
-        int level = profile(player).activeLevel();
-        Fireball fireball = player.getWorld().spawn(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.8D)), Fireball.class, spawned -> {
-            spawned.setGravity(false);
-            spawned.setVelocity(new Vector(0.0D, 0.0D, 0.0D));
-            spawned.setDirection(new Vector(0.0D, 0.0D, 0.0D));
-            spawned.setYield((float) (plugin.getConfig().getDouble("bloodlines.spartan.fireball.explosion-power", 1.8D)
-                    + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.fireball.explosion-power-per-level", 0.35D)));
-            spawned.setIsIncendiary(true);
-            spawned.setShooter(player);
-        });
+        heldFireballs.remove(player.getUniqueId());
         long holdMillis = plugin.getConfig().getLong("bloodlines.spartan.fireball.hold-seconds", 15L) * 1000L;
-        heldFireballs.put(player.getUniqueId(), new HeldFireballState(fireball, System.currentTimeMillis() + holdMillis));
+        heldFireballs.put(player.getUniqueId(), new HeldFireballState(System.currentTimeMillis() + holdMillis));
+        player.sendActionBar(Component.text("Fireball primed. Left click to launch.", NamedTextColor.GOLD));
     }
 
     public boolean tryLaunchHeldSpartanFireball(Player player) {
         HeldFireballState state = heldFireballs.get(player.getUniqueId());
-        if (state == null || !state.fireball().isValid()) {
+        if (state == null || state.expiresAt() <= System.currentTimeMillis()) {
             heldFireballs.remove(player.getUniqueId());
             return false;
         }
@@ -362,13 +349,20 @@ public final class BloodlineManager {
         int level = profile(player).activeLevel();
         double speed = plugin.getConfig().getDouble("bloodlines.spartan.fireball.speed", 1.5D)
                 + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.fireball.speed-per-level", 0.1D);
-        Fireball fireball = state.fireball();
-        fireball.teleport(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.9D)));
-        fireball.setDirection(player.getEyeLocation().getDirection());
-        fireball.setVelocity(player.getEyeLocation().getDirection().normalize().multiply(speed));
-        fireball.setGravity(true);
+        Vector direction = player.getEyeLocation().getDirection().normalize();
+        Fireball fireball = player.getWorld().spawn(player.getEyeLocation().add(direction.multiply(0.9D)), Fireball.class, spawned -> {
+            spawned.setGravity(false);
+            spawned.setDirection(direction);
+            spawned.setVelocity(direction.multiply(speed));
+            spawned.setAcceleration(direction.multiply(0.12D));
+            spawned.setYield((float) (plugin.getConfig().getDouble("bloodlines.spartan.fireball.explosion-power", 1.8D)
+                    + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.fireball.explosion-power-per-level", 0.35D)));
+            spawned.setIsIncendiary(true);
+            spawned.setShooter(player);
+        });
         heldFireballs.remove(player.getUniqueId());
         player.getWorld().playSound(player.getLocation(), Sound.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1F, 0.9F);
+        player.getWorld().spawnParticle(Particle.FLAME, fireball.getLocation(), 20, 0.18, 0.18, 0.18, 0.02);
         return true;
     }
 
@@ -379,15 +373,19 @@ public final class BloodlineManager {
         if (universal) {
             durationSeconds = Math.round(durationSeconds * 0.75D);
         }
+        removeVoidFlightElytra(player);
         ItemStack currentChestplate = player.getInventory().getChestplate();
         storedChestplates.put(player.getUniqueId(), currentChestplate == null ? null : currentChestplate.clone());
 
-        ItemStack elytra = new ItemStack(Material.ELYTRA);
+        ItemStack elytra = plugin.getCustomItems().createVoidFlightElytra();
         player.getInventory().setChestplate(elytra);
         player.setAllowFlight(false);
         player.setFlying(false);
         player.setGliding(true);
         player.setVelocity(player.getVelocity().add(new Vector(0.0D, 0.8D, 0.0D)));
+        int speedAmplifier = Math.min(2, Math.max(0, (level - 1) / 2));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (int) (durationSeconds * 20L), speedAmplifier, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) (durationSeconds * 20L), level >= 5 ? 1 : 0, true, true, true));
         voidFlightEndsAt.put(player.getUniqueId(), System.currentTimeMillis() + durationSeconds * 1000L);
         markDirty(player);
     }
@@ -410,6 +408,11 @@ public final class BloodlineManager {
         player.setFallDistance(0F);
         player.getWorld().spawnParticle(Particle.REVERSE_PORTAL, from.add(0, 1, 0), 25, 0.25, 0.4, 0.25, 0.03);
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation().add(0, 1, 0), 35, 0.35, 0.45, 0.35, 0.05);
+        if (!universal) {
+            int invisibilitySeconds = plugin.getConfig().getInt("bloodlines.voider.void-blink.invisibility-seconds", 6)
+                    + Math.max(0, level - 1) * plugin.getConfig().getInt("bloodlines.voider.void-blink.invisibility-seconds-per-level", 1);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, invisibilitySeconds * 20, 0, true, true, true));
+        }
 
         long buffMillis = plugin.getConfig().getLong("bloodlines.voider.void-blink.follow-up-window-seconds", 3L) * 1000L;
         voidBlinkHits.put(player.getUniqueId(), System.currentTimeMillis() + buffMillis);
@@ -436,7 +439,7 @@ public final class BloodlineManager {
         Set<UUID> hit = ConcurrentHashMap.newKeySet();
         for (int step = 1; step <= 6; step++) {
             Location point = player.getLocation().clone().add(player.getLocation().getDirection().normalize().multiply(step * 0.75D));
-            for (LivingEntity nearby : point.getNearbyLivingEntities(radius, entity -> entity instanceof Player && entity != player)) {
+            for (LivingEntity nearby : point.getNearbyLivingEntities(radius, entity -> entity != player)) {
                 if (!hit.add(nearby.getUniqueId())) {
                     continue;
                 }
@@ -457,20 +460,24 @@ public final class BloodlineManager {
                 player.getEyeLocation(),
                 player.getEyeLocation().getDirection(),
                 range,
-                entity -> entity instanceof Player && entity != player
+                entity -> entity instanceof LivingEntity && entity != player
         );
-        if (trace == null || !(trace.getHitEntity() instanceof Player target)) {
+        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
             return false;
         }
 
         long durationTicks = plugin.getConfig().getLong("bloodlines.aqua.suffocation-curse.duration-seconds", 10L) * 20L;
         long durationExtra = Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.aqua.suffocation-curse.duration-seconds-per-level", 1L) * 20L;
-        aquaCurses.put(target.getUniqueId(), new AquaCurseState(
-                player.getUniqueId(),
-                System.currentTimeMillis() + ((durationTicks + durationExtra) * 50L)
-        ));
+        if (target instanceof Player targetPlayer) {
+            aquaCurses.put(targetPlayer.getUniqueId(), new AquaCurseState(
+                    player.getUniqueId(),
+                    System.currentTimeMillis() + ((durationTicks + durationExtra) * 50L)
+            ));
+        } else {
+            startAquaEntityCurse(player, target, level, durationTicks + durationExtra);
+        }
         target.getWorld().spawnParticle(Particle.BUBBLE_COLUMN_UP, target.getLocation().add(0, 1, 0), 28, 0.35, 0.45, 0.35, 0.04);
-        target.playSound(target.getLocation(), Sound.BLOCK_BUBBLE_COLUMN_WHIRLPOOL_INSIDE, SoundCategory.PLAYERS, 0.85F, 0.85F);
+        target.getWorld().playSound(target.getLocation(), Sound.BLOCK_BUBBLE_COLUMN_WHIRLPOOL_INSIDE, SoundCategory.PLAYERS, 0.85F, 0.85F);
         return true;
     }
 
@@ -505,7 +512,7 @@ public final class BloodlineManager {
         double knockback = plugin.getConfig().getDouble("bloodlines.aqua.tidal-surge.knockback", 1.2D)
                 + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.aqua.tidal-surge.knockback-per-level", 0.08D);
 
-        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity instanceof Player && entity != player)) {
+        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity != player)) {
             nearby.damage(damage, player);
             Vector push = nearby.getLocation().toVector().subtract(player.getLocation().toVector()).normalize().multiply(knockback);
             push.setY(0.35D);
@@ -576,12 +583,12 @@ public final class BloodlineManager {
             return;
         }
 
-        List<Player> targets = center.getNearbyLivingEntities(radius, entity -> entity instanceof Player && entity != player).stream()
-                .filter(Player.class::isInstance)
-                .map(Player.class::cast)
+        List<LivingEntity> targets = center.getNearbyLivingEntities(radius, entity -> entity != player).stream()
+                .filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast)
                 .limit(maxTargets)
                 .toList();
-        for (Player target : targets) {
+        for (LivingEntity target : targets) {
             Location destination = findSafeNetherLocation(nether, target.getLocation(), target.getLocation().getYaw(), target.getLocation().getPitch());
             if (destination == null) {
                 continue;
@@ -591,7 +598,9 @@ public final class BloodlineManager {
             target.setFallDistance(0F);
             target.getWorld().spawnParticle(Particle.LARGE_SMOKE, destination.clone().add(0, 1, 0), 22, 0.35, 0.55, 0.35, 0.03);
             target.getWorld().playSound(destination, Sound.ENTITY_ZOMBIFIED_PIGLIN_ANGRY, SoundCategory.PLAYERS, 0.9F, 0.8F);
-            target.sendActionBar(Component.text("Hell Dominion dragged you into the Nether.", NamedTextColor.RED));
+            if (target instanceof Player targetPlayer) {
+                targetPlayer.sendActionBar(Component.text("Hell Dominion dragged you into the Nether.", NamedTextColor.RED));
+            }
         }
     }
 
@@ -609,7 +618,7 @@ public final class BloodlineManager {
         double knockback = plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.knockback", 2.8D)
                 + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.knockback-per-level", 0.18D);
 
-        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity instanceof Player && entity != player)) {
+        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity != player)) {
             nearby.damage(damage, player);
             Vector push = nearby.getLocation().toVector().subtract(player.getLocation().toVector()).normalize().multiply(knockback);
             push.setY(0.55D);
@@ -659,7 +668,8 @@ public final class BloodlineManager {
         voidFlightEndsAt.remove(uuid);
         ItemStack stored = storedChestplates.remove(uuid);
         player.setGliding(false);
-        player.getInventory().setChestplate(stored);
+        restoreChestplateAfterVoidFlight(player, stored);
+        removeVoidFlightElytra(player);
         if (!isOnSolidGround(player)) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0, true, false, true));
         }
@@ -683,10 +693,11 @@ public final class BloodlineManager {
 
         PotionEffectType effectType = Registry.EFFECT.get(org.bukkit.NamespacedKey.minecraft(profile.voidDailyEffect()));
         if (effectType != null) {
-            int amplifier = Math.min(
-                    plugin.getConfig().getInt("bloodlines.voider.passive.amplifier-at-level-5", 1),
-                    level >= 5 ? 1 : 0
-            );
+            int amplifier = switch (level) {
+                case 5 -> Math.max(1, plugin.getConfig().getInt("bloodlines.voider.passive.amplifier-at-level-5", 2));
+                case 4 -> 1;
+                default -> 0;
+            };
             player.addPotionEffect(new PotionEffect(effectType, 220, amplifier, true, false, true));
         }
     }
@@ -703,15 +714,17 @@ public final class BloodlineManager {
                 + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.voider.void-send.range-per-level", 2.0D);
         if (universal) {
             range *= 0.8D;
+        } else {
+            range *= 1.25D;
         }
 
         RayTraceResult trace = player.getWorld().rayTraceEntities(
                 player.getEyeLocation(),
                 player.getEyeLocation().getDirection(),
                 range,
-                entity -> entity instanceof Player && entity != player
+                entity -> entity instanceof LivingEntity && entity != player
         );
-        if (trace == null || !(trace.getHitEntity() instanceof Player target)) {
+        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
             return false;
         }
 
@@ -746,7 +759,9 @@ public final class BloodlineManager {
 
         target.teleport(destination);
         target.getWorld().spawnParticle(Particle.PORTAL, target.getLocation().add(0, 1, 0), 70, 0.6, 1.0, 0.6, 0.06);
-        target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1F, 0.7F);
+        if (target instanceof Player targetPlayer) {
+            targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1F, 0.7F);
+        }
         return true;
     }
 
@@ -788,7 +803,11 @@ public final class BloodlineManager {
         }
     }
 
-    public void applyTraitPotion(Player player, BloodlineType type, int level) {
+    public boolean applyTraitPotion(Player player, BloodlineType type, int level) {
+        if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
+            player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
+            return false;
+        }
         PlayerProfile profile = profile(player);
         removeAllPassives(player);
         profile.setSingleBloodline(type, Math.max(1, Math.min(PlayerProfile.MAX_LEVEL, level)));
@@ -797,6 +816,7 @@ public final class BloodlineManager {
         updateFlightAvailability(player);
         markDirty(player);
         player.sendActionBar(Component.text("Switched to " + type.displayName() + " level " + profile.activeLevel(), NamedTextColor.GREEN));
+        return true;
     }
 
     public void applyUpgradePotion(Player player) {
@@ -813,6 +833,10 @@ public final class BloodlineManager {
     }
 
     public void grantBloodline(Player player, BloodlineType type, int level) {
+        if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
+            player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
+            return;
+        }
         PlayerProfile profile = profile(player);
         profile.setSingleBloodline(type, Math.max(1, Math.min(PlayerProfile.MAX_LEVEL, level)));
         clearBloodlineState(profile);
@@ -823,6 +847,10 @@ public final class BloodlineManager {
     }
 
     public void forceActiveBloodline(Player player, BloodlineType type, int level) {
+        if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
+            player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
+            return;
+        }
         PlayerProfile profile = profile(player);
         removeAllPassives(player);
         profile.setSingleBloodline(type, Math.max(1, Math.min(PlayerProfile.MAX_LEVEL, level)));
@@ -841,6 +869,9 @@ public final class BloodlineManager {
         }
 
         PlayerProfile profile = plugin.getPlayerDataManager().getOrCreate(targetUuid);
+        if (type == BloodlineType.VOIDER && !canUseVoider(targetUuid)) {
+            return;
+        }
         clearBloodlineState(profile);
         profile.setSingleBloodline(type, Math.max(1, Math.min(PlayerProfile.MAX_LEVEL, level)));
         plugin.getPlayerDataManager().saveSync(profile);
@@ -854,7 +885,7 @@ public final class BloodlineManager {
 
     public BloodlineType rerollInitialBloodline(Player player, boolean animated) {
         PlayerProfile profile = profile(player);
-        BloodlineType rolled = plugin.getPlayerDataManager().rollInitialBloodline();
+        BloodlineType rolled = rollEligibleInitialBloodline(player);
         removeAllPassives(player);
         profile.setSingleBloodline(rolled, 1);
         clearBloodlineState(profile);
@@ -919,7 +950,7 @@ public final class BloodlineManager {
 
     public void handleMeleeHit(Player attacker, Entity target) {
         PlayerProfile attackerProfile = profile(attacker);
-        if (!(target instanceof Player victim)) {
+        if (!(target instanceof LivingEntity victim)) {
             return;
         }
 
@@ -928,11 +959,13 @@ public final class BloodlineManager {
             long burnSeconds = plugin.getConfig().getLong("bloodlines.spartan.flaming-hands.burn-seconds", 300L)
                     + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.spartan.flaming-hands.burn-seconds-per-level", 30L);
             long burnMillis = burnSeconds * 1000L;
-            PlayerProfile victimProfile = profile(victim);
-            victimProfile.setCursedBySpartan(attacker.getUniqueId());
-            victimProfile.setCursedUntil(System.currentTimeMillis() + burnMillis);
             victim.setFireTicks((int) (burnMillis / 50L));
-            markDirty(victim);
+            if (victim instanceof Player victimPlayer) {
+                PlayerProfile victimProfile = profile(victimPlayer);
+                victimProfile.setCursedBySpartan(attacker.getUniqueId());
+                victimProfile.setCursedUntil(System.currentTimeMillis() + burnMillis);
+                markDirty(victimPlayer);
+            }
         }
 
         Long blinkHitUntil = voidBlinkHits.get(attacker.getUniqueId());
@@ -958,11 +991,13 @@ public final class BloodlineManager {
             long bonusBurnSeconds = plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.hit-burn-seconds", 6L)
                     + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.hit-burn-seconds-per-level", 1L);
             victim.setFireTicks(Math.max(victim.getFireTicks(), (int) (bonusBurnSeconds * 20L)));
-            PlayerProfile victimProfile = profile(victim);
-            long extended = Math.max(victimProfile.cursedUntil(), System.currentTimeMillis()) + (bonusBurnSeconds * 1000L);
-            victimProfile.setCursedBySpartan(attacker.getUniqueId());
-            victimProfile.setCursedUntil(extended);
-            markDirty(victim);
+            if (victim instanceof Player victimPlayer) {
+                PlayerProfile victimProfile = profile(victimPlayer);
+                long extended = Math.max(victimProfile.cursedUntil(), System.currentTimeMillis()) + (bonusBurnSeconds * 1000L);
+                victimProfile.setCursedBySpartan(attacker.getUniqueId());
+                victimProfile.setCursedUntil(extended);
+                markDirty(victimPlayer);
+            }
         }
 
         Long fusionUntil = universalBloodFusionUntil.get(attacker.getUniqueId());
@@ -1014,10 +1049,7 @@ public final class BloodlineManager {
 
         endVoidFlight(victim, true);
         aquaCurses.remove(victim.getUniqueId());
-        HeldFireballState heldFireball = heldFireballs.remove(victim.getUniqueId());
-        if (heldFireball != null && heldFireball.fireball().isValid()) {
-            heldFireball.fireball().remove();
-        }
+        heldFireballs.remove(victim.getUniqueId());
         HellDominionState dominion = spartanHellDominions.remove(victim.getUniqueId());
         if (dominion != null) {
             endHellDominion(victim, dominion, false);
@@ -1121,14 +1153,8 @@ public final class BloodlineManager {
 
             HeldFireballState heldFireball = heldFireballs.get(player.getUniqueId());
             if (heldFireball != null) {
-                if (heldFireball.expiresAt() <= now || !heldFireball.fireball().isValid()) {
-                    if (heldFireball.fireball().isValid()) {
-                        heldFireball.fireball().remove();
-                    }
+                if (heldFireball.expiresAt() <= now) {
                     heldFireballs.remove(player.getUniqueId());
-                } else {
-                    heldFireball.fireball().teleport(player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(0.85D)));
-                    heldFireball.fireball().setVelocity(new Vector(0.0D, 0.0D, 0.0D));
                 }
             }
 
@@ -1144,7 +1170,7 @@ public final class BloodlineManager {
                     double auraDamage = plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.aura-damage-per-second", 1.0D)
                             + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.aura-damage-per-second-per-level", 0.25D);
                     player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1, 0), 12, 0.5, 0.7, 0.5, 0.03);
-                    for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(auraRadius, entity -> entity instanceof Player && entity != player)) {
+                    for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(auraRadius, entity -> entity != player)) {
                         nearby.damage(auraDamage, player);
                         nearby.setFireTicks(Math.max(nearby.getFireTicks(), 40));
                     }
@@ -1176,11 +1202,9 @@ public final class BloodlineManager {
                 } else {
                     player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 0.6, 0), 4, 0.2, 0.1, 0.2, 0.01);
                     player.getWorld().spawnParticle(Particle.SPLASH, player.getLocation().add(0, 0.4, 0), 4, 0.2, 0.1, 0.2, 0.04);
-                    for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(1.6D, entity -> entity instanceof Player && entity != player)) {
+                    for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(1.6D, entity -> entity != player)) {
                         nearby.setFireTicks(Math.max(nearby.getFireTicks(), 40));
-                        if (nearby instanceof Player target) {
-                            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 0, true, true, true));
-                        }
+                        nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 0, true, true, true));
                     }
                 }
             }
@@ -1340,6 +1364,29 @@ public final class BloodlineManager {
         }
     }
 
+    private boolean canUseVoider(Player player) {
+        return canUseVoiderName(player.getName());
+    }
+
+    private boolean canUseVoider(UUID uuid) {
+        String name = Bukkit.getOfflinePlayer(uuid).getName();
+        return canUseVoiderName(name);
+    }
+
+    private boolean canUseVoiderName(String name) {
+        return name != null && name.equalsIgnoreCase(allowedVoiderOwnerName());
+    }
+
+    private String allowedVoiderOwnerName() {
+        return plugin.getConfig().getString("bloodlines.voider.owner-username", "W4Whiskers");
+    }
+
+    private BloodlineType rollEligibleInitialBloodline(Player player) {
+        return canUseVoider(player)
+                ? plugin.getPlayerDataManager().rollInitialBloodline()
+                : plugin.getPlayerDataManager().rollNonVoiderBloodline();
+    }
+
     private void runFirstJoinSelectionAnimation(Player player, BloodlineType selected) {
         List<BloodlineType> sequence = List.of(
                 BloodlineType.AQUA,
@@ -1404,10 +1451,7 @@ public final class BloodlineManager {
         profile.setSpartanFlamingHandsUntil(0L);
         clearCurse(profile);
         aquaCurses.remove(profile.uuid());
-        HeldFireballState heldFireball = heldFireballs.remove(profile.uuid());
-        if (heldFireball != null && heldFireball.fireball().isValid()) {
-            heldFireball.fireball().remove();
-        }
+        heldFireballs.remove(profile.uuid());
         HellDominionState dominion = spartanHellDominions.remove(profile.uuid());
         if (dominion != null) {
             Player online = Bukkit.getPlayer(profile.uuid());
@@ -1545,6 +1589,56 @@ public final class BloodlineManager {
         return feet.isPassable() && head.isPassable() && below.getType().isSolid();
     }
 
+    private void startAquaEntityCurse(Player caster, LivingEntity target, int level, long totalTicks) {
+        int slownessAmplifier = Math.min(
+                plugin.getConfig().getInt("bloodlines.aqua.suffocation-curse.slowness-amplifier-at-level-5", 2),
+                level >= 5 ? 2 : Math.max(0, (level - 1) / 2)
+        );
+        final int[] remainingSeconds = {(int) Math.max(1L, totalTicks / 20L)};
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, (int) totalTicks, slownessAmplifier, true, true, true));
+        plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
+            if (!target.isValid() || target.isDead()) {
+                task.cancel();
+                return;
+            }
+            if (target.isInWater() || remainingSeconds[0]-- <= 0) {
+                task.cancel();
+                return;
+            }
+            double curseDamage = plugin.getConfig().getDouble("bloodlines.aqua.suffocation-curse.damage-per-second", 1.0D)
+                    + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.aqua.suffocation-curse.damage-per-second-per-level", 0.35D);
+            target.damage(curseDamage, caster);
+            target.getWorld().spawnParticle(Particle.BUBBLE, target.getLocation().add(0, 1, 0), 8, 0.2, 0.35, 0.2, 0.03);
+        }, 20L, 20L);
+    }
+
+    private void removeVoidFlightElytra(Player player) {
+        ItemStack chestplate = player.getInventory().getChestplate();
+        if (plugin.getCustomItems().isVoidFlightElytra(chestplate)) {
+            player.getInventory().setChestplate(null);
+        }
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            if (plugin.getCustomItems().isVoidFlightElytra(contents[slot])) {
+                player.getInventory().setItem(slot, null);
+            }
+        }
+    }
+
+    private void restoreChestplateAfterVoidFlight(Player player, ItemStack stored) {
+        ItemStack current = player.getInventory().getChestplate();
+        boolean currentIsTemporary = plugin.getCustomItems().isVoidFlightElytra(current);
+        if (currentIsTemporary || current == null) {
+            player.getInventory().setChestplate(stored);
+            return;
+        }
+        if (stored == null) {
+            return;
+        }
+        Map<Integer, ItemStack> overflow = player.getInventory().addItem(stored);
+        overflow.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+    }
+
     private List<TemporaryWaterBlock> createTemporaryWaterArea(Location center, double radius) {
         List<TemporaryWaterBlock> changed = new ArrayList<>();
         World world = center.getWorld();
@@ -1639,7 +1733,7 @@ public final class BloodlineManager {
     private record TidalSurgeState(long endsAt, List<TemporaryWaterBlock> changedBlocks, Location returnLocation, boolean teleported) {
     }
 
-    private record HeldFireballState(Fireball fireball, long expiresAt) {
+    private record HeldFireballState(long expiresAt) {
     }
 
     private record HellDominionState(long endsAt, Location returnLocation, boolean teleported) {

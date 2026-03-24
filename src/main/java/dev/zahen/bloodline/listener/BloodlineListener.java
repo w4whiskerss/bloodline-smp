@@ -184,7 +184,9 @@ public final class BloodlineListener implements Listener {
         if (CustomItems.TYPE_TRAIT_POTION.equals(itemType)) {
             BloodlineType bloodline = plugin.getCustomItems().getBloodline(item);
             if (bloodline != null) {
-                manager.applyTraitPotion(event.getPlayer(), bloodline, plugin.getCustomItems().getStoredLevel(item));
+                if (!manager.applyTraitPotion(event.getPlayer(), bloodline, plugin.getCustomItems().getStoredLevel(item))) {
+                    event.setCancelled(true);
+                }
             }
         } else if (CustomItems.TYPE_UPGRADE_POTION.equals(itemType)) {
             manager.applyUpgradePotion(event.getPlayer());

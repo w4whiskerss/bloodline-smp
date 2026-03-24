@@ -181,6 +181,25 @@ public final class PlayerDataManager {
         return BloodlineType.VOIDER;
     }
 
+    public BloodlineType rollNonVoiderBloodline() {
+        double roll = Math.max(0.0D, Math.min(100.0D, Math.random() * 100.0D));
+        double aqua = plugin.getConfig().getDouble("first-join-selection.chances.aqua", 35.0D);
+        double earthian = plugin.getConfig().getDouble("first-join-selection.chances.earthian", 30.0D);
+        double spartan = plugin.getConfig().getDouble("first-join-selection.chances.spartan", 20.0D);
+        double total = aqua + earthian + spartan;
+        if (total <= 0.0D) {
+            return BloodlineType.AQUA;
+        }
+        double normalized = (roll / 100.0D) * total;
+        if (normalized < aqua) {
+            return BloodlineType.AQUA;
+        }
+        if (normalized < aqua + earthian) {
+            return BloodlineType.EARTHIAN;
+        }
+        return BloodlineType.SPARTAN;
+    }
+
     public record KnownPlayerRecord(UUID uuid, String name) {
     }
 }

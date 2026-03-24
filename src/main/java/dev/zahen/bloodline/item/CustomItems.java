@@ -19,6 +19,7 @@ public final class CustomItems {
     public static final String TYPE_TRAIT_POTION = "trait_potion";
     public static final String TYPE_UPGRADE_POTION = "upgrade_potion";
     public static final String TYPE_UNIVERSAL_CORE = "universal_core";
+    public static final String TYPE_VOID_FLIGHT_ELYTRA = "void_flight_elytra";
 
     private final NamespacedKey itemTypeKey;
     private final NamespacedKey bloodlineKey;
@@ -71,6 +72,20 @@ public final class CustomItems {
         return item;
     }
 
+    public ItemStack createVoidFlightElytra() {
+        ItemStack item = new ItemStack(Material.ELYTRA);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Voider Flight Elytra", NamedTextColor.DARK_PURPLE));
+        meta.lore(List.of(
+                Component.text("Temporary bloodline flight gear.", NamedTextColor.GRAY),
+                Component.text("Removed when Void Flight ends.", NamedTextColor.DARK_GRAY)
+        ));
+        tag(meta.getPersistentDataContainer(), TYPE_VOID_FLIGHT_ELYTRA, BloodlineType.VOIDER, 1);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
+    }
+
     public String getItemType(ItemStack item) {
         if (item == null || !item.hasItemMeta()) {
             return null;
@@ -92,6 +107,10 @@ public final class CustomItems {
         }
         Integer level = item.getItemMeta().getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
         return level == null ? 0 : level;
+    }
+
+    public boolean isVoidFlightElytra(ItemStack item) {
+        return TYPE_VOID_FLIGHT_ELYTRA.equals(getItemType(item));
     }
 
     private void tag(PersistentDataContainer container, String type, BloodlineType bloodline, int level) {

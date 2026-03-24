@@ -75,14 +75,12 @@ public final class EarthianBloodline extends AbstractBloodline {
                 1 + Math.max(0, level(player) - 1) / 3
         );
         Vector center = player.getLocation().toVector();
-        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity instanceof Player && entity != player)) {
-            if (nearby instanceof Player target) {
-                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, slownessAmplifier, true, true, true));
-                target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, durationTicks, miningFatigueAmplifier, true, true, true));
-                Vector pull = center.clone().subtract(target.getLocation().toVector()).normalize().multiply(0.45D);
-                pull.setY(Math.max(-0.08D, target.getVelocity().getY() * 0.25D));
-                target.setVelocity(pull);
-            }
+        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity != player)) {
+            nearby.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, slownessAmplifier, true, true, true));
+            nearby.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, durationTicks, miningFatigueAmplifier, true, true, true));
+            Vector pull = center.clone().subtract(nearby.getLocation().toVector()).normalize().multiply(0.45D);
+            pull.setY(Math.max(-0.08D, nearby.getVelocity().getY() * 0.25D));
+            nearby.setVelocity(pull);
         }
 
         player.getWorld().spawnParticle(Particle.BLOCK, player.getLocation().add(0, 0.1, 0), 40, radius / 2, 0.2, radius / 2,

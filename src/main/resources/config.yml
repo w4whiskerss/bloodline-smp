@@ -161,28 +161,31 @@ bloodlines:
       explosion-power-per-level: 0.45
 
   voider:
+    owner-username: "W4Whiskers"
     passive:
-      amplifier-at-level-5: 1
+      amplifier-at-level-5: 2
     void-blink:
       cooldown-seconds: 45
       cooldown-reduction-per-level: 3
-      distance: 8.0
-      distance-per-level: 0.5
+      distance: 12.0
+      distance-per-level: 1.0
       follow-up-window-seconds: 3
-      bonus-damage: 3.0
-      bonus-damage-per-level: 0.75
-      knockback: 0.85
-      knockback-per-level: 0.06
+      bonus-damage: 6.0
+      bonus-damage-per-level: 1.25
+      knockback: 1.2
+      knockback-per-level: 0.12
+      invisibility-seconds: 6
+      invisibility-seconds-per-level: 1
     void-flight:
       duration-seconds: 300
       duration-seconds-per-level: 30
       cooldown-seconds: 1800
       cooldown-reduction-per-level: 60
     void-send:
-      range: 35.0
-      range-per-level: 2.0
-      random-radius: 900
-      random-radius-per-level: 75
+      range: 48.0
+      range-per-level: 3.0
+      random-radius: 1400
+      random-radius-per-level: 120
       recharge-hours: 12
 
   universal:

@@ -31,6 +31,7 @@ public final class BloodlineTestCommand implements TabExecutor {
             sender.sendMessage("/bloodlinetest active <player> <bloodline>");
             sender.sendMessage("/bloodlinetest maxall <player>");
             sender.sendMessage("/bloodlinetest reroll <player> [animate]");
+            sender.sendMessage("/bloodlinetest rerollall [animate]");
             sender.sendMessage("/bloodlinetest grace <start|stop|set> [duration]");
             return true;
         }
@@ -104,6 +105,14 @@ public final class BloodlineTestCommand implements TabExecutor {
                 sender.sendMessage("Rerolled " + target.getName() + " to " + rolled.displayName() + ".");
                 return true;
             }
+            case "rerollall" -> {
+                boolean animate = args.length < 2 || Boolean.parseBoolean(args[1]);
+                for (Player target : Bukkit.getOnlinePlayers()) {
+                    BloodlineType rolled = plugin.getBloodlineManager().rerollInitialBloodline(target, animate);
+                    sender.sendMessage("Rerolled " + target.getName() + " to " + rolled.displayName() + ".");
+                }
+                return true;
+            }
             case "grace" -> {
                 if (args.length < 2) {
                     return true;
@@ -134,7 +143,7 @@ public final class BloodlineTestCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("set", "give", "active", "maxall", "reroll", "grace");
+            return List.of("set", "give", "active", "maxall", "reroll", "rerollall", "grace");
         }
         if (args.length == 2 && List.of("set", "give", "active", "maxall", "reroll").contains(args[0].toLowerCase())) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
@@ -146,6 +155,9 @@ public final class BloodlineTestCommand implements TabExecutor {
             return Arrays.stream(BloodlineType.values()).map(BloodlineType::key).toList();
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("reroll")) {
+            return List.of("true", "false");
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("rerollall")) {
             return List.of("true", "false");
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("grace") && args[1].equalsIgnoreCase("set")) {

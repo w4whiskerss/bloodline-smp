@@ -93,6 +93,7 @@ public class VoiderBloodline extends AbstractBloodline {
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Daily random level 1 potion effect", NamedTextColor.GRAY),
+                Component.text("Void Blink grants temporary invisibility", NamedTextColor.GRAY),
                 Component.text("Higher levels strengthen the daily buff and flight/send values", NamedTextColor.GRAY),
                 Component.text("Primary: Void Blink", NamedTextColor.GRAY),
                 Component.text("Secondary: Void Send (2 charges)", NamedTextColor.GRAY),
