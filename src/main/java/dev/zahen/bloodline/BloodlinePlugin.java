@@ -14,6 +14,7 @@ import dev.zahen.bloodline.item.CustomItems;
 import dev.zahen.bloodline.listener.BloodlineListener;
 import dev.zahen.bloodline.manager.BloodlineManager;
 import dev.zahen.bloodline.manager.GracePeriodManager;
+import dev.zahen.bloodline.update.PluginUpdater;
 import dev.zahen.bloodline.world.WaterWorldGenerator;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -29,10 +30,13 @@ public final class BloodlinePlugin extends JavaPlugin {
     private BloodlineGui bloodlineGui;
     private AdminPanelGui adminPanelGui;
     private CustomItems customItems;
+    private PluginUpdater pluginUpdater;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
         initializeSpecialWorlds();
 
         this.customItems = new CustomItems(this);
@@ -41,6 +45,7 @@ public final class BloodlinePlugin extends JavaPlugin {
         this.adminPanelGui = new AdminPanelGui(this);
         this.gracePeriodManager = new GracePeriodManager(this);
         this.bloodlineManager = new BloodlineManager(this);
+        this.pluginUpdater = new PluginUpdater(this);
 
         BloodlineListener listener = new BloodlineListener(this);
         getServer().getPluginManager().registerEvents(listener, this);
@@ -103,6 +108,7 @@ public final class BloodlinePlugin extends JavaPlugin {
         bloodlineManager.startSchedulers();
         bloodlineManager.registerRecipes();
         gracePeriodManager.start();
+        pluginUpdater.checkForUpdatesAsync();
     }
 
     @Override

@@ -1,6 +1,11 @@
 grace:
   default-seconds: 300
 
+auto-update:
+  enabled: false
+  github-release-api: "https://api.github.com/repos/w4whiskerss/bloodline-smp/releases/latest"
+  asset-prefix: "bloodline-smp-"
+
 testing:
   enable-test-commands: true
 
