@@ -25,6 +25,11 @@ public class VoiderBloodline extends AbstractBloodline {
     @Override
     public void applyPassive(Player player) {
         manager().applyVoiderDailyPassive(player);
+        if (manager().shouldGrantVoiderInvisibility(player, type())) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 120, 0, true, false, true));
+        } else {
+            player.removePotionEffect(PotionEffectType.INVISIBILITY);
+        }
         if (level(player) >= 4) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 120, 0, true, false, true));
         } else {
@@ -35,6 +40,7 @@ public class VoiderBloodline extends AbstractBloodline {
     @Override
     public void removePassive(Player player) {
         manager().removeVoiderDailyPassive(player);
+        player.removePotionEffect(PotionEffectType.INVISIBILITY);
         player.removePotionEffect(PotionEffectType.NIGHT_VISION);
     }
 
@@ -93,11 +99,11 @@ public class VoiderBloodline extends AbstractBloodline {
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Daily random level 1 potion effect", NamedTextColor.GRAY),
-                Component.text("Void Blink grants temporary invisibility", NamedTextColor.GRAY),
+                Component.text("Invisibility only applies in the End or during your special", NamedTextColor.GRAY),
                 Component.text("Higher levels strengthen the daily buff and flight/send values", NamedTextColor.GRAY),
                 Component.text("Primary: Void Blink", NamedTextColor.GRAY),
                 Component.text("Secondary: Void Send (2 charges)", NamedTextColor.GRAY),
-                Component.text("Special: Shift + Double Jump for Void Flight", NamedTextColor.GRAY)
+                Component.text("Special: Void Flight", NamedTextColor.GRAY)
         );
     }
 }

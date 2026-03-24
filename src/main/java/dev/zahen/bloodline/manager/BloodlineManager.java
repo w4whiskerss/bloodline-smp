@@ -427,12 +427,6 @@ public final class BloodlineManager {
         player.setFallDistance(0F);
         player.getWorld().spawnParticle(Particle.REVERSE_PORTAL, from.add(0, 1, 0), 25, 0.25, 0.4, 0.25, 0.03);
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation().add(0, 1, 0), 35, 0.35, 0.45, 0.35, 0.05);
-        if (!universal) {
-            int invisibilitySeconds = plugin.getConfig().getInt("bloodlines.voider.void-blink.invisibility-seconds", 6)
-                    + Math.max(0, level - 1) * plugin.getConfig().getInt("bloodlines.voider.void-blink.invisibility-seconds-per-level", 1);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, invisibilitySeconds * 20, 0, true, true, true));
-        }
-
         long buffMillis = plugin.getConfig().getLong("bloodlines.voider.void-blink.follow-up-window-seconds", 3L) * 1000L;
         voidBlinkHits.put(player.getUniqueId(), System.currentTimeMillis() + buffMillis);
         return true;
@@ -707,14 +701,16 @@ public final class BloodlineManager {
         int level = profile.activeLevel();
         long now = System.currentTimeMillis();
         long cycleMillis = 24L * 60L * 60L * 1000L;
-        if (profile.voidDailyEffect() == null || now - profile.voidDailyEffectAssignedAt() >= cycleMillis) {
+        PotionEffectType currentEffect = resolveAllowedVoiderDailyEffect(profile.voidDailyEffect());
+        if (currentEffect == null || now - profile.voidDailyEffectAssignedAt() >= cycleMillis) {
             PotionEffectType effect = voidEffects.get(ThreadLocalRandom.current().nextInt(voidEffects.size()));
             profile.setVoidDailyEffect(effect.getKey().getKey());
             profile.setVoidDailyEffectAssignedAt(now);
             markDirty(player);
+            currentEffect = effect;
         }
 
-        PotionEffectType effectType = Registry.EFFECT.get(org.bukkit.NamespacedKey.minecraft(profile.voidDailyEffect()));
+        PotionEffectType effectType = currentEffect;
         if (effectType != null) {
             int amplifier = switch (level) {
                 case 5 -> Math.max(1, plugin.getConfig().getInt("bloodlines.voider.passive.amplifier-at-level-5", 2));
@@ -729,6 +725,19 @@ public final class BloodlineManager {
         for (PotionEffectType effect : voidEffects) {
             player.removePotionEffect(effect);
         }
+    }
+
+    public boolean shouldGrantVoiderInvisibility(Player player, BloodlineType type) {
+        World world = player.getWorld();
+        if (world != null && world.getEnvironment() == World.Environment.THE_END) {
+            return true;
+        }
+        long now = System.currentTimeMillis();
+        return switch (type) {
+            case VOIDER -> voidFlightEndsAt.getOrDefault(player.getUniqueId(), 0L) > now;
+            case UNIVERSAL -> universalAscensionUntil.getOrDefault(player.getUniqueId(), 0L) > now;
+            default -> false;
+        };
     }
 
     public boolean tryVoidSend(Player player, boolean universal) {
@@ -1527,6 +1536,17 @@ public final class BloodlineManager {
 
     private boolean changedBlock(Location from, Location to) {
         return from.getBlockX() != to.getBlockX() || from.getBlockY() != to.getBlockY() || from.getBlockZ() != to.getBlockZ();
+    }
+
+    private PotionEffectType resolveAllowedVoiderDailyEffect(String key) {
+        if (key == null || key.isBlank()) {
+            return null;
+        }
+        PotionEffectType effectType = Registry.EFFECT.get(org.bukkit.NamespacedKey.minecraft(key));
+        if (effectType == null || !voidEffects.contains(effectType)) {
+            return null;
+        }
+        return effectType;
     }
 
     private BloodlineType resolveShardCraft(ItemStack[] matrix) {
