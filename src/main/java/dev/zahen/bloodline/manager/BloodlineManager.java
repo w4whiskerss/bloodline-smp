@@ -113,10 +113,10 @@ public final class BloodlineManager {
         recipe.shape("NAN", "EDV", "NSN");
         recipe.setIngredient('N', Material.NETHER_STAR);
         recipe.setIngredient('D', Material.DRAGON_EGG);
-        recipe.setIngredient('A', Material.ECHO_SHARD);
-        recipe.setIngredient('S', Material.ECHO_SHARD);
-        recipe.setIngredient('E', Material.ECHO_SHARD);
-        recipe.setIngredient('V', Material.ECHO_SHARD);
+        recipe.setIngredient('A', Material.DISC_FRAGMENT_5);
+        recipe.setIngredient('S', Material.DISC_FRAGMENT_5);
+        recipe.setIngredient('E', Material.DISC_FRAGMENT_5);
+        recipe.setIngredient('V', Material.DISC_FRAGMENT_5);
         Bukkit.addRecipe(recipe);
     }
 
@@ -1581,15 +1581,32 @@ public final class BloodlineManager {
         if (matrix == null || matrix.length < 9) {
             return false;
         }
-        return isNetherStar(matrix[0])
-                && plugin.getCustomItems().isBloodlineShard(matrix[1], BloodlineType.AQUA)
-                && isNetherStar(matrix[2])
-                && plugin.getCustomItems().isBloodlineShard(matrix[3], BloodlineType.EARTHIAN)
-                && isExactMaterial(matrix[4], Material.DRAGON_EGG)
-                && plugin.getCustomItems().isBloodlineShard(matrix[5], BloodlineType.VOIDER)
-                && isNetherStar(matrix[6])
-                && plugin.getCustomItems().isBloodlineShard(matrix[7], BloodlineType.SPARTAN)
-                && isNetherStar(matrix[8]);
+        if (!isNetherStar(matrix[0])
+                || !isNetherStar(matrix[2])
+                || !isExactMaterial(matrix[4], Material.DRAGON_EGG)
+                || !isNetherStar(matrix[6])
+                || !isNetherStar(matrix[8])) {
+            return false;
+        }
+
+        java.util.EnumSet<BloodlineType> required = java.util.EnumSet.of(
+                BloodlineType.AQUA,
+                BloodlineType.SPARTAN,
+                BloodlineType.EARTHIAN,
+                BloodlineType.VOIDER
+        );
+        java.util.EnumSet<BloodlineType> found = java.util.EnumSet.noneOf(BloodlineType.class);
+        for (int slot : new int[]{1, 3, 5, 7}) {
+            BloodlineType type = plugin.getCustomItems().getBloodline(matrix[slot]);
+            if (plugin.getCustomItems().getItemType(matrix[slot]) == null
+                    || !dev.zahen.bloodline.item.CustomItems.TYPE_BLOODLINE_SHARD.equals(plugin.getCustomItems().getItemType(matrix[slot]))
+                    || type == null
+                    || !required.contains(type)
+                    || !found.add(type)) {
+                return false;
+            }
+        }
+        return found.equals(required);
     }
 
     private boolean isNetherStar(ItemStack item) {

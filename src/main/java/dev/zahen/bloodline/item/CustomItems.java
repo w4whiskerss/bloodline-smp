@@ -61,7 +61,7 @@ public final class CustomItems {
     }
 
     public ItemStack createBloodlineShard(BloodlineType type) {
-        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemStack item = new ItemStack(Material.DISC_FRAGMENT_5);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text(type.displayName() + " Bloodline Shard", type.color()));
         meta.lore(List.of(
