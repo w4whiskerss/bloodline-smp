@@ -204,6 +204,11 @@ public final class BloodlineListener implements Listener {
             plugin.getAdminPanelGui().handleClick(player, event.getClickedInventory(), event.getSlot());
             return;
         }
+        if (plugin.getTestItemsGui().isTitle(title)) {
+            event.setCancelled(true);
+            plugin.getTestItemsGui().handleClick(player, event.getSlot());
+            return;
+        }
         if (!title.equals(BloodlineGui.TITLE)) {
             return;
         }

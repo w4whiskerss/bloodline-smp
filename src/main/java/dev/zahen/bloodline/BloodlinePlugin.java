@@ -10,6 +10,7 @@ import dev.zahen.bloodline.command.GraceCommand;
 import dev.zahen.bloodline.data.PlayerDataManager;
 import dev.zahen.bloodline.gui.AdminPanelGui;
 import dev.zahen.bloodline.gui.BloodlineGui;
+import dev.zahen.bloodline.gui.TestItemsGui;
 import dev.zahen.bloodline.item.CustomItems;
 import dev.zahen.bloodline.listener.BloodlineListener;
 import dev.zahen.bloodline.manager.BloodlineManager;
@@ -29,6 +30,7 @@ public final class BloodlinePlugin extends JavaPlugin {
     private GracePeriodManager gracePeriodManager;
     private BloodlineGui bloodlineGui;
     private AdminPanelGui adminPanelGui;
+    private TestItemsGui testItemsGui;
     private CustomItems customItems;
     private PluginUpdater pluginUpdater;
 
@@ -43,6 +45,7 @@ public final class BloodlinePlugin extends JavaPlugin {
         this.playerDataManager = new PlayerDataManager(this);
         this.bloodlineGui = new BloodlineGui(this);
         this.adminPanelGui = new AdminPanelGui(this);
+        this.testItemsGui = new TestItemsGui(this);
         this.gracePeriodManager = new GracePeriodManager(this);
         this.bloodlineManager = new BloodlineManager(this);
         this.pluginUpdater = new PluginUpdater(this);
@@ -138,6 +141,10 @@ public final class BloodlinePlugin extends JavaPlugin {
 
     public AdminPanelGui getAdminPanelGui() {
         return adminPanelGui;
+    }
+
+    public TestItemsGui getTestItemsGui() {
+        return testItemsGui;
     }
 
     public GracePeriodManager getGracePeriodManager() {

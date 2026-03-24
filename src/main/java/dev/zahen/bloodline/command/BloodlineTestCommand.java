@@ -26,6 +26,10 @@ public final class BloodlineTestCommand implements TabExecutor {
             return true;
         }
         if (args.length == 0) {
+            if (sender instanceof Player player) {
+                plugin.getTestItemsGui().open(player);
+                return true;
+            }
             sender.sendMessage("/bloodlinetest set <player> <bloodline> <level>");
             sender.sendMessage("/bloodlinetest give <player> <bloodline> <level>");
             sender.sendMessage("/bloodlinetest active <player> <bloodline>");
@@ -33,10 +37,19 @@ public final class BloodlineTestCommand implements TabExecutor {
             sender.sendMessage("/bloodlinetest reroll <player> [animate]");
             sender.sendMessage("/bloodlinetest rerollall [animate]");
             sender.sendMessage("/bloodlinetest grace <start|stop|set> [duration]");
+            sender.sendMessage("/bloodlinetest items");
             return true;
         }
 
         switch (args[0].toLowerCase()) {
+            case "items" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("Only players can open the test items panel.");
+                    return true;
+                }
+                plugin.getTestItemsGui().open(player);
+                return true;
+            }
             case "set" -> {
                 if (args.length < 4) {
                     return true;
@@ -143,7 +156,7 @@ public final class BloodlineTestCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("set", "give", "active", "maxall", "reroll", "rerollall", "grace");
+            return List.of("items", "set", "give", "active", "maxall", "reroll", "rerollall", "grace");
         }
         if (args.length == 2 && List.of("set", "give", "active", "maxall", "reroll").contains(args[0].toLowerCase())) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
