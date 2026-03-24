@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -68,6 +69,7 @@ public final class BloodlineManager {
     private final Map<UUID, Long> universalRiftDashUntil = new ConcurrentHashMap<>();
     private final Map<UUID, ItemStack> storedChestplates = new ConcurrentHashMap<>();
     private final Map<UUID, Long> voidFlightEndsAt = new ConcurrentHashMap<>();
+    private final Map<UUID, BossBar> voidFlightBossBars = new ConcurrentHashMap<>();
     private final Map<UUID, Location> lastBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, Long> stillSince = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyProfiles = ConcurrentHashMap.newKeySet();
@@ -176,6 +178,10 @@ public final class BloodlineManager {
         clientHotkeyPlayers.remove(player.getUniqueId());
         inputDebounce.remove(player.getUniqueId());
         dirtyProfiles.remove(player.getUniqueId());
+        BossBar bossBar = voidFlightBossBars.remove(player.getUniqueId());
+        if (bossBar != null) {
+            player.hideBossBar(bossBar);
+        }
     }
 
     public void handleMove(Player player, Location from, Location to) {
@@ -386,7 +392,17 @@ public final class BloodlineManager {
         int speedAmplifier = Math.min(2, Math.max(0, (level - 1) / 2));
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (int) (durationSeconds * 20L), speedAmplifier, true, true, true));
         player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) (durationSeconds * 20L), level >= 5 ? 1 : 0, true, true, true));
-        voidFlightEndsAt.put(player.getUniqueId(), System.currentTimeMillis() + durationSeconds * 1000L);
+        long endsAt = System.currentTimeMillis() + durationSeconds * 1000L;
+        voidFlightEndsAt.put(player.getUniqueId(), endsAt);
+        BossBar bossBar = BossBar.bossBar(Component.text("Void Flight: " + TimeUtil.formatMillis(durationSeconds * 1000L), NamedTextColor.DARK_PURPLE),
+                1.0F,
+                BossBar.Color.PURPLE,
+                BossBar.Overlay.PROGRESS);
+        BossBar previousBar = voidFlightBossBars.put(player.getUniqueId(), bossBar);
+        if (previousBar != null) {
+            player.hideBossBar(previousBar);
+        }
+        player.showBossBar(bossBar);
         markDirty(player);
     }
 
@@ -666,6 +682,10 @@ public final class BloodlineManager {
             return;
         }
         voidFlightEndsAt.remove(uuid);
+        BossBar bossBar = voidFlightBossBars.remove(uuid);
+        if (bossBar != null) {
+            player.hideBossBar(bossBar);
+        }
         ItemStack stored = storedChestplates.remove(uuid);
         player.setGliding(false);
         restoreChestplateAfterVoidFlight(player, stored);
@@ -1215,8 +1235,19 @@ public final class BloodlineManager {
             }
 
             Long flightEnds = voidFlightEndsAt.get(player.getUniqueId());
-            if (flightEnds != null && flightEnds <= now) {
-                endVoidFlight(player, false);
+            if (flightEnds != null) {
+                BossBar flightBossBar = voidFlightBossBars.get(player.getUniqueId());
+                if (flightEnds <= now) {
+                    endVoidFlight(player, false);
+                } else if (flightBossBar != null) {
+                    long remainingMillis = flightEnds - now;
+                    long totalDurationMillis = plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds", 300L) * 1000L;
+                    int level = profile.activeBloodline() == BloodlineType.VOIDER ? profile.activeLevel() : profile.level(BloodlineType.VOIDER);
+                    totalDurationMillis += Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds-per-level", 30L) * 1000L;
+                    float progress = Math.max(0.0F, Math.min(1.0F, remainingMillis / (float) totalDurationMillis));
+                    flightBossBar.name(Component.text("Void Flight: " + TimeUtil.formatMillis(remainingMillis), NamedTextColor.DARK_PURPLE));
+                    flightBossBar.progress(progress);
+                }
             }
 
             TidalSurgeState surge = tidalSurges.get(player.getUniqueId());

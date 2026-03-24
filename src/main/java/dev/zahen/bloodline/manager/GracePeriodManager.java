@@ -97,17 +97,23 @@ public final class GracePeriodManager {
         bossBar.name(Component.text("Grace Period: " + TimeUtil.formatMillis(remaining), NamedTextColor.AQUA));
         bossBar.progress(progress);
         showBossBarToAll();
-        applyPvpRule(false);
     }
 
     private void startFiveSecondCountdown() {
         for (int i = 5; i >= 1; i--) {
             int seconds = i;
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                NamedTextColor color = switch (seconds) {
+                    case 5 -> NamedTextColor.GREEN;
+                    case 4 -> NamedTextColor.YELLOW;
+                    case 3 -> NamedTextColor.GOLD;
+                    case 2 -> NamedTextColor.RED;
+                    default -> NamedTextColor.DARK_RED;
+                };
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     player.showTitle(Title.title(
-                            Component.text(String.valueOf(seconds), NamedTextColor.RED),
-                            Component.text("PvP returning", NamedTextColor.GOLD),
+                            Component.text(String.valueOf(seconds), color),
+                            Component.text("PvP returning", color),
                             Title.Times.times(Duration.ZERO, Duration.ofMillis(800), Duration.ofMillis(200))
                     ));
                 }
