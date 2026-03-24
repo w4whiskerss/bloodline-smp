@@ -2,6 +2,7 @@ package dev.zahen.bloodline.item;
 
 import dev.zahen.bloodline.BloodlinePlugin;
 import dev.zahen.bloodline.model.BloodlineType;
+import dev.zahen.bloodline.model.PlayerProfile;
 import java.util.List;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -18,6 +19,7 @@ public final class CustomItems {
 
     public static final String TYPE_TRAIT_POTION = "trait_potion";
     public static final String TYPE_UPGRADE_POTION = "upgrade_potion";
+    public static final String TYPE_BLOODLINE_SHARD = "bloodline_shard";
     public static final String TYPE_UNIVERSAL_CORE = "universal_core";
     public static final String TYPE_VOID_FLIGHT_ELYTRA = "void_flight_elytra";
 
@@ -54,6 +56,21 @@ public final class CustomItems {
                 Component.text("Caps at level 5.", NamedTextColor.DARK_GRAY)
         ));
         tag(meta.getPersistentDataContainer(), TYPE_UPGRADE_POTION, null, 0);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public ItemStack createBloodlineShard(BloodlineType type) {
+        ItemStack item = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text(type.displayName() + " Bloodline Shard", type.color()));
+        meta.lore(List.of(
+                Component.text("Forged from 5 upgrade potions", NamedTextColor.GRAY),
+                Component.text("and 1 " + type.displayName() + " trait potion.", NamedTextColor.GRAY),
+                Component.text("Used to craft the Universal Bloodline.", NamedTextColor.DARK_GRAY)
+        ));
+        tag(meta.getPersistentDataContainer(), TYPE_BLOODLINE_SHARD, type, PlayerProfile.MAX_LEVEL);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
         return item;
     }
@@ -111,6 +128,10 @@ public final class CustomItems {
 
     public boolean isVoidFlightElytra(ItemStack item) {
         return TYPE_VOID_FLIGHT_ELYTRA.equals(getItemType(item));
+    }
+
+    public boolean isBloodlineShard(ItemStack item, BloodlineType type) {
+        return TYPE_BLOODLINE_SHARD.equals(getItemType(item)) && getBloodline(item) == type;
     }
 
     private void tag(PersistentDataContainer container, String type, BloodlineType bloodline, int level) {

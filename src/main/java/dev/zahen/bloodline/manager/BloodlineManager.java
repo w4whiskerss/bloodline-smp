@@ -108,12 +108,15 @@ public final class BloodlineManager {
     }
 
     public void registerRecipes() {
+        Bukkit.removeRecipe(universalRecipeKey);
         ShapedRecipe recipe = new ShapedRecipe(universalRecipeKey, plugin.getCustomItems().createUniversalCore());
-        recipe.shape(" A ", "ESE", " M ");
-        recipe.setIngredient('A', Material.HEART_OF_THE_SEA);
-        recipe.setIngredient('E', Material.ENDER_EYE);
-        recipe.setIngredient('S', Material.NETHERITE_SCRAP);
-        recipe.setIngredient('M', Material.MOSS_BLOCK);
+        recipe.shape("NAN", "EDV", "NSN");
+        recipe.setIngredient('N', Material.NETHER_STAR);
+        recipe.setIngredient('D', Material.DRAGON_EGG);
+        recipe.setIngredient('A', Material.ECHO_SHARD);
+        recipe.setIngredient('S', Material.ECHO_SHARD);
+        recipe.setIngredient('E', Material.ECHO_SHARD);
+        recipe.setIngredient('V', Material.ECHO_SHARD);
         Bukkit.addRecipe(recipe);
     }
 
@@ -1096,6 +1099,17 @@ public final class BloodlineManager {
         dirtyProfiles.add(player.getUniqueId());
     }
 
+    public ItemStack resolveCustomCraftResult(ItemStack[] matrix) {
+        BloodlineType shardType = resolveShardCraft(matrix);
+        if (shardType != null) {
+            return plugin.getCustomItems().createBloodlineShard(shardType);
+        }
+        if (matchesUniversalShardRecipe(matrix)) {
+            return plugin.getCustomItems().createUniversalCore();
+        }
+        return null;
+    }
+
     public boolean isUniversalRecipe(ItemStack result) {
         String type = plugin.getCustomItems().getItemType(result);
         return type != null && type.equals(dev.zahen.bloodline.item.CustomItems.TYPE_UNIVERSAL_CORE);
@@ -1513,6 +1527,57 @@ public final class BloodlineManager {
 
     private boolean changedBlock(Location from, Location to) {
         return from.getBlockX() != to.getBlockX() || from.getBlockY() != to.getBlockY() || from.getBlockZ() != to.getBlockZ();
+    }
+
+    private BloodlineType resolveShardCraft(ItemStack[] matrix) {
+        if (matrix == null || matrix.length == 0) {
+            return null;
+        }
+        int upgradePotions = 0;
+        BloodlineType traitType = null;
+        for (ItemStack item : matrix) {
+            if (item == null || item.getType().isAir()) {
+                continue;
+            }
+            String itemType = plugin.getCustomItems().getItemType(item);
+            if (dev.zahen.bloodline.item.CustomItems.TYPE_UPGRADE_POTION.equals(itemType)) {
+                upgradePotions += item.getAmount();
+                continue;
+            }
+            if (dev.zahen.bloodline.item.CustomItems.TYPE_TRAIT_POTION.equals(itemType)) {
+                BloodlineType foundType = plugin.getCustomItems().getBloodline(item);
+                if (traitType != null || foundType == null) {
+                    return null;
+                }
+                traitType = foundType;
+                continue;
+            }
+            return null;
+        }
+        return upgradePotions == 5 && traitType != null ? traitType : null;
+    }
+
+    private boolean matchesUniversalShardRecipe(ItemStack[] matrix) {
+        if (matrix == null || matrix.length < 9) {
+            return false;
+        }
+        return isNetherStar(matrix[0])
+                && plugin.getCustomItems().isBloodlineShard(matrix[1], BloodlineType.AQUA)
+                && isNetherStar(matrix[2])
+                && plugin.getCustomItems().isBloodlineShard(matrix[3], BloodlineType.EARTHIAN)
+                && isExactMaterial(matrix[4], Material.DRAGON_EGG)
+                && plugin.getCustomItems().isBloodlineShard(matrix[5], BloodlineType.VOIDER)
+                && isNetherStar(matrix[6])
+                && plugin.getCustomItems().isBloodlineShard(matrix[7], BloodlineType.SPARTAN)
+                && isNetherStar(matrix[8]);
+    }
+
+    private boolean isNetherStar(ItemStack item) {
+        return isExactMaterial(item, Material.NETHER_STAR);
+    }
+
+    private boolean isExactMaterial(ItemStack item, Material material) {
+        return item != null && item.getAmount() == 1 && item.getType() == material;
     }
 
     private long earthianRegenDelayMillis(PlayerProfile profile) {

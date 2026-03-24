@@ -146,7 +146,7 @@ public final class BloodlineListener implements Listener {
             return;
         }
 
-        if (attacker != null && attacker.isSneaking() && event.getDamager() instanceof Player && !manager.usesClientHotkeys(attacker)) {
+        if (attacker != null && attacker.isSneaking() && !manager.usesClientHotkeys(attacker)) {
             event.setCancelled(true);
             manager.triggerSecondary(attacker);
             return;
@@ -230,7 +230,12 @@ public final class BloodlineListener implements Listener {
 
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
-        ItemStack result = event.getInventory().getResult();
+        ItemStack result = manager.resolveCustomCraftResult(event.getInventory().getMatrix());
+        if (result != null) {
+            event.getInventory().setResult(result);
+        } else {
+            result = event.getInventory().getResult();
+        }
         if (!manager.isUniversalRecipe(result)) {
             return;
         }
