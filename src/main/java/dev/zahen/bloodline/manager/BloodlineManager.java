@@ -934,10 +934,6 @@ public final class BloodlineManager {
 
     public void unlockUniversal(Player player) {
         PlayerProfile profile = profile(player);
-        if (!profile.hasAllBaseBloodlinesAtMax()) {
-            player.sendActionBar(Component.text("Max all four base bloodlines first.", NamedTextColor.RED));
-            return;
-        }
         profile.setLevel(BloodlineType.UNIVERSAL, 1);
         profile.setActiveBloodline(BloodlineType.UNIVERSAL);
         removeAllPassives(player);

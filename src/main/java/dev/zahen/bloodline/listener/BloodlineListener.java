@@ -238,29 +238,11 @@ public final class BloodlineListener implements Listener {
         ItemStack result = manager.resolveCustomCraftResult(event.getInventory().getMatrix());
         if (result != null) {
             event.getInventory().setResult(result);
-        } else {
-            result = event.getInventory().getResult();
-        }
-        if (!manager.isUniversalRecipe(result)) {
-            return;
-        }
-        if (!event.getViewers().isEmpty() && event.getViewers().getFirst() instanceof Player player) {
-            if (!manager.profile(player).hasAllBaseBloodlinesAtMax()) {
-                event.getInventory().setResult(null);
-            }
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onCraft(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
-            return;
-        }
-        ItemStack current = event.getCurrentItem();
-        if (!manager.isUniversalRecipe(current) || manager.profile(player).hasAllBaseBloodlinesAtMax()) {
-            return;
-        }
-        event.setCancelled(true);
     }
 
     private Player resolveAttacker(EntityDamageByEntityEvent event) {

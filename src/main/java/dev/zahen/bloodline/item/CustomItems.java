@@ -81,7 +81,7 @@ public final class CustomItems {
         meta.displayName(Component.text("Universal Bloodline", NamedTextColor.LIGHT_PURPLE));
         meta.lore(List.of(
                 Component.text("Right click to unlock the Universal Bloodline.", NamedTextColor.GRAY),
-                Component.text("Requires every base bloodline at level 5.", NamedTextColor.DARK_GRAY)
+                Component.text("Crafted from the four bloodline shards.", NamedTextColor.DARK_GRAY)
         ));
         tag(meta.getPersistentDataContainer(), TYPE_UNIVERSAL_CORE, BloodlineType.UNIVERSAL, 1);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
