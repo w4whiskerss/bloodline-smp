@@ -1,16 +1,28 @@
 <div align="center">
 
-# Bloodline SMP
+<img width="100%" alt="Bloodline SMP Banner" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:111827,20:1E3A8A,55:C2410C,100:6D28D9&text=Bloodline%20SMP&fontSize=56&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=PaperMC%20PvP%20Bloodline%20System&descAlignY=60&descSize=20" />
 
-### A custom PaperMC PvP bloodline system for Minecraft 1.21.11
+<br />
 
-[![Version](https://img.shields.io/badge/version-2.0.16-111111?style=for-the-badge&logo=github)](https://github.com/w4whiskerss/bloodline-smp)
-[![Paper](https://img.shields.io/badge/Paper-1.21.11-00C853?style=for-the-badge&logo=minecraft)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-21-F89820?style=for-the-badge&logo=openjdk)](https://adoptium.net/)
+[![repo](https://img.shields.io/badge/repo-bloodlinesmp-0f172a?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+[![live version](https://img.shields.io/badge/version-2.0.17-f97316?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
+[![paper](https://img.shields.io/badge/paper-1.21.11-2563eb?style=flat-square)](https://papermc.io/)
+[![java](https://img.shields.io/badge/java-21-22c55e?style=flat-square)](https://adoptium.net/)
+[![focus](https://img.shields.io/badge/focus-bloodline%20combat-a855f7?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+[![style](https://img.shields.io/badge/style-public%20smp%20ready-06b6d4?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp)
+
+<br />
 
 [![YouTube](https://img.shields.io/badge/YouTube-W4Whiskerss-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@W4Whiskerss)
 [![Discord](https://img.shields.io/badge/Discord-Private%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/NjZg46TRmf)
-[![Repo](https://img.shields.io/badge/GitHub-bloodlinesmp-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/w4whiskerss/bloodline-smp)
+[![GitHub](https://img.shields.io/badge/GitHub-bloodline--smp-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/w4whiskerss/bloodline-smp)
+
+<br />
+<br />
+
+Custom **PaperMC PvP plugin** for **Minecraft 1.21.11** built around bloodlines, progression, chaos, and creator-style SMP gameplay.
+
+Bloodline SMP gives each player **one active bloodline**, custom passives, ability scaling up to **Level 5**, PvP drops, admin tools, grace period controls, and an optional client hotkey mod.
 
 </div>
 
@@ -143,7 +155,7 @@ Full Discord-ready ability write-up:
 
 Output:
 
-- `build/libs/bloodline-smp-2.0.16.jar`
+- `build/libs/bloodline-smp-2.0.17.jar`
 
 ### Local test server
 
