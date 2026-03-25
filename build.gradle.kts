@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "dev.zahen"
-version = "2.2.9"
+version = "2.3.0"
 
 val paperVersion = "1.21.11"
 val paperBuild = "69"

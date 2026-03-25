@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -21,6 +22,7 @@ public final class CustomItems {
     public static final String TYPE_UPGRADE_POTION = "upgrade_potion";
     public static final String TYPE_BLOODLINE_SHARD = "bloodline_shard";
     public static final String TYPE_UNIVERSAL_CORE = "universal_core";
+    public static final String TYPE_OMNI_BLADE = "omni_blade";
     public static final String TYPE_VOID_FLIGHT_ELYTRA = "void_flight_elytra";
 
     private final NamespacedKey itemTypeKey;
@@ -78,12 +80,30 @@ public final class CustomItems {
     public ItemStack createUniversalCore() {
         ItemStack item = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Omni", NamedTextColor.LIGHT_PURPLE));
+        meta.displayName(Component.text("Omni Star", NamedTextColor.LIGHT_PURPLE));
         meta.lore(List.of(
                 Component.text("Right click to unlock Omni.", NamedTextColor.GRAY),
+                Component.text("Can also be used to craft the OmniBlade.", NamedTextColor.GRAY),
                 Component.text("Crafted from the four bloodline shards.", NamedTextColor.DARK_GRAY)
         ));
         tag(meta.getPersistentDataContainer(), TYPE_UNIVERSAL_CORE, BloodlineType.UNIVERSAL, 1);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public ItemStack createOmniBlade() {
+        ItemStack item = new ItemStack(Material.NETHERITE_SWORD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("OmniBlade", NamedTextColor.LIGHT_PURPLE));
+        meta.lore(List.of(
+                Component.text("A kill with this blade seals the victim.", NamedTextColor.GRAY),
+                Component.text("Victims are kicked and rejoin in spectator mode.", NamedTextColor.DARK_GRAY)
+        ));
+        CustomModelDataComponent component = meta.getCustomModelDataComponent();
+        component.setFloats(List.of(220829f));
+        meta.setCustomModelDataComponent(component);
+        tag(meta.getPersistentDataContainer(), TYPE_OMNI_BLADE, BloodlineType.UNIVERSAL, 1);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
         return item;
@@ -132,6 +152,10 @@ public final class CustomItems {
 
     public boolean isBloodlineShard(ItemStack item, BloodlineType type) {
         return TYPE_BLOODLINE_SHARD.equals(getItemType(item)) && getBloodline(item) == type;
+    }
+
+    public boolean isOmniBlade(ItemStack item) {
+        return TYPE_OMNI_BLADE.equals(getItemType(item));
     }
 
     private void tag(PersistentDataContainer container, String type, BloodlineType bloodline, int level) {

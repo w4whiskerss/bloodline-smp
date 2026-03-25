@@ -21,6 +21,7 @@ public final class PlayerProfile {
     private String voidDailyEffect;
     private long voidDailyEffectAssignedAt;
     private boolean freshAssignmentPending;
+    private boolean omniBladeSpectatorLocked;
 
     public PlayerProfile(UUID uuid, BloodlineType activeBloodline) {
         this.uuid = uuid;
@@ -147,6 +148,14 @@ public final class PlayerProfile {
 
     public void setFreshAssignmentPending(boolean freshAssignmentPending) {
         this.freshAssignmentPending = freshAssignmentPending;
+    }
+
+    public boolean omniBladeSpectatorLocked() {
+        return omniBladeSpectatorLocked;
+    }
+
+    public void setOmniBladeSpectatorLocked(boolean omniBladeSpectatorLocked) {
+        this.omniBladeSpectatorLocked = omniBladeSpectatorLocked;
     }
 
     public boolean hasAllBaseBloodlinesAtMax() {

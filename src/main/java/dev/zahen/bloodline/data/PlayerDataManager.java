@@ -135,6 +135,7 @@ public final class PlayerDataManager {
         profile.setVoidSendLastRechargeAt(yaml.getLong("voider.void-send-last-recharge-at", System.currentTimeMillis()));
         profile.setVoidDailyEffect(yaml.getString("voider.daily-effect"));
         profile.setVoidDailyEffectAssignedAt(yaml.getLong("voider.daily-effect-assigned-at", 0L));
+        profile.setOmniBladeSpectatorLocked(yaml.getBoolean("omni-blade.spectator-locked", false));
         return profile;
     }
 
@@ -157,6 +158,7 @@ public final class PlayerDataManager {
         yaml.set("voider.void-send-last-recharge-at", profile.voidSendLastRechargeAt());
         yaml.set("voider.daily-effect", profile.voidDailyEffect());
         yaml.set("voider.daily-effect-assigned-at", profile.voidDailyEffectAssignedAt());
+        yaml.set("omni-blade.spectator-locked", profile.omniBladeSpectatorLocked());
         return yaml;
     }
 

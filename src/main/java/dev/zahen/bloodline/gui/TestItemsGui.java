@@ -35,8 +35,10 @@ public final class TestItemsGui {
                 List.of("Click to get 1 Upgrade Potion")));
         inventory.setItem(46, createLabeledItem(Material.EXPERIENCE_BOTTLE, NamedTextColor.GOLD, "Upgrade Potion x5",
                 List.of("Click to get 5 Upgrade Potions")));
-        inventory.setItem(49, createLabeledItem(Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE, "Omni",
-                List.of("Click to get the Omni unlock item")));
+        inventory.setItem(48, createLabeledItem(Material.NETHER_STAR, NamedTextColor.LIGHT_PURPLE, "Omni Star",
+                List.of("Click to get the Omni Star")));
+        inventory.setItem(49, createLabeledItem(Material.NETHERITE_SWORD, NamedTextColor.LIGHT_PURPLE, "OmniBlade",
+                List.of("Click to get the OmniBlade")));
         inventory.setItem(53, createLabeledItem(Material.BARRIER, NamedTextColor.RED, "Close",
                 List.of("Close this menu")));
 
@@ -62,8 +64,12 @@ public final class TestItemsGui {
             give(player, stack);
             return;
         }
-        if (slot == 49) {
+        if (slot == 48) {
             give(player, plugin.getCustomItems().createUniversalCore());
+            return;
+        }
+        if (slot == 49) {
+            give(player, plugin.getCustomItems().createOmniBlade());
             return;
         }
 

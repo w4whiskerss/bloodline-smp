@@ -175,7 +175,7 @@ public final class BloodlineListener implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
-        manager.handleDeath(event.getPlayer(), event.getPlayer().getKiller(), event);
+        manager.handleDeath(event.getPlayer(), event.getPlayer().getKiller(), event, wasKilledByOmniBlade(event.getPlayer()));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -280,5 +280,13 @@ public final class BloodlineListener implements Listener {
             return player;
         }
         return null;
+    }
+
+    private boolean wasKilledByOmniBlade(Player victim) {
+        if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damageEvent)) {
+            return false;
+        }
+        Player attacker = resolveAttacker(damageEvent);
+        return attacker != null && plugin.getCustomItems().isOmniBlade(attacker.getInventory().getItemInMainHand());
     }
 }

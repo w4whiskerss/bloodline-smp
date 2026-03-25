@@ -84,10 +84,12 @@ public final class BloodlineManager {
     );
     private final NamespacedKey universalRecipeKey;
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final NamespacedKey omniBladeRecipeKey;
 
     public BloodlineManager(BloodlinePlugin plugin) {
         this.plugin = plugin;
         this.universalRecipeKey = new NamespacedKey(plugin, "universal_bloodline");
+        this.omniBladeRecipeKey = new NamespacedKey(plugin, "omni_blade");
         bloodlines.put(BloodlineType.AQUA, new AquaBloodline(plugin));
         bloodlines.put(BloodlineType.SPARTAN, new SpartanBloodline(plugin));
         bloodlines.put(BloodlineType.EARTHIAN, new EarthianBloodline(plugin));
@@ -118,6 +120,17 @@ public final class BloodlineManager {
         recipe.setIngredient('E', Material.DISC_FRAGMENT_5);
         recipe.setIngredient('V', Material.DISC_FRAGMENT_5);
         Bukkit.addRecipe(recipe);
+
+        Bukkit.removeRecipe(omniBladeRecipeKey);
+        ShapedRecipe omniBladeRecipe = new ShapedRecipe(omniBladeRecipeKey, plugin.getCustomItems().createOmniBlade());
+        omniBladeRecipe.shape("AMA", "SOX", "ANA");
+        omniBladeRecipe.setIngredient('A', Material.ANVIL);
+        omniBladeRecipe.setIngredient('M', Material.MACE);
+        omniBladeRecipe.setIngredient('S', Material.NETHERITE_SPEAR);
+        omniBladeRecipe.setIngredient('O', Material.NETHER_STAR);
+        omniBladeRecipe.setIngredient('X', Material.NETHERITE_AXE);
+        omniBladeRecipe.setIngredient('N', Material.NETHERITE_SWORD);
+        Bukkit.addRecipe(omniBladeRecipe);
     }
 
     public PlayerProfile profile(Player player) {
@@ -142,6 +155,10 @@ public final class BloodlineManager {
         lastBlocks.put(player.getUniqueId(), player.getLocation().getBlock().getLocation());
         getBloodline(profile.activeBloodline()).applyPassive(player);
         updateFlightAvailability(player);
+        if (profile.omniBladeSpectatorLocked()) {
+            player.setGameMode(GameMode.SPECTATOR);
+            player.sendActionBar(Component.text("The OmniBlade has bound you to spectator mode.", NamedTextColor.LIGHT_PURPLE));
+        }
         markDirty(player);
         if (profile.freshAssignmentPending()) {
             runFirstJoinSelectionAnimation(player, profile.activeBloodline());
@@ -1057,7 +1074,7 @@ public final class BloodlineManager {
         }
     }
 
-    public void handleDeath(Player victim, Player killer, org.bukkit.event.entity.PlayerDeathEvent event) {
+    public void handleDeath(Player victim, Player killer, org.bukkit.event.entity.PlayerDeathEvent event, boolean omniBladeKill) {
         if (killer != null) {
             PlayerProfile killerProfile = profile(killer);
             if (killerProfile.cursedBySpartan() != null && killerProfile.cursedBySpartan().equals(victim.getUniqueId())) {
@@ -1096,8 +1113,15 @@ public final class BloodlineManager {
         }
         clearCurse(victimProfile);
         victimProfile.resetActiveBloodlineLevel();
+        if (omniBladeKill) {
+            victimProfile.setOmniBladeSpectatorLocked(true);
+        }
         clearBloodlineState(victimProfile);
         markDirty(victim);
+        if (omniBladeKill) {
+            plugin.getServer().getScheduler().runTask(plugin, () ->
+                    victim.kick(Component.text("You were slain by the OmniBlade.", NamedTextColor.LIGHT_PURPLE)));
+        }
     }
 
     public void markDirty(Player player) {
@@ -1111,6 +1135,9 @@ public final class BloodlineManager {
         }
         if (matchesUniversalShardRecipe(matrix)) {
             return plugin.getCustomItems().createUniversalCore();
+        }
+        if (matchesOmniBladeRecipe(matrix)) {
+            return plugin.getCustomItems().createOmniBlade();
         }
         return null;
     }
@@ -1603,6 +1630,21 @@ public final class BloodlineManager {
             }
         }
         return found.equals(required);
+    }
+
+    private boolean matchesOmniBladeRecipe(ItemStack[] matrix) {
+        if (matrix == null || matrix.length < 9) {
+            return false;
+        }
+        return isExactMaterial(matrix[0], Material.ANVIL)
+                && isExactMaterial(matrix[1], Material.MACE)
+                && isExactMaterial(matrix[2], Material.ANVIL)
+                && isExactMaterial(matrix[3], Material.NETHERITE_SPEAR)
+                && dev.zahen.bloodline.item.CustomItems.TYPE_UNIVERSAL_CORE.equals(plugin.getCustomItems().getItemType(matrix[4]))
+                && isExactMaterial(matrix[5], Material.NETHERITE_AXE)
+                && isExactMaterial(matrix[6], Material.ANVIL)
+                && isExactMaterial(matrix[7], Material.NETHERITE_SWORD)
+                && isExactMaterial(matrix[8], Material.ANVIL);
     }
 
     private boolean isNetherStar(ItemStack item) {
