@@ -1,5 +1,5 @@
 name: BloodlineSMP
-version: 2.2.8
+version: 2.2.9
 main: dev.zahen.bloodline.BloodlinePlugin
 api-version: '1.21'
 author: w4whiskers

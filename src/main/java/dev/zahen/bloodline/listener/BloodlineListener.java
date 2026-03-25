@@ -17,6 +17,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -233,16 +234,42 @@ public final class BloodlineListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (plugin.getAdminPanelGui().isListTitle(title)
+                || plugin.getAdminPanelGui().isEditTitle(title)
+                || plugin.getTestItemsGui().isTitle(title)
+                || title.equals(BloodlineGui.TITLE)) {
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
         ItemStack result = manager.resolveCustomCraftResult(event.getInventory().getMatrix());
-        if (result != null) {
-            event.getInventory().setResult(result);
-        }
+        event.getInventory().setResult(result);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onCraft(CraftItemEvent event) {
+        ItemStack expected = manager.resolveCustomCraftResult(event.getInventory().getMatrix());
+        ItemStack current = event.getCurrentItem();
+        if (current != null && plugin.getCustomItems().getItemType(current) != null) {
+            if (expected == null || !sameCustomItem(current, expected)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    private boolean sameCustomItem(ItemStack left, ItemStack right) {
+        String leftType = plugin.getCustomItems().getItemType(left);
+        String rightType = plugin.getCustomItems().getItemType(right);
+        if (leftType == null || rightType == null || !leftType.equals(rightType)) {
+            return false;
+        }
+        return plugin.getCustomItems().getBloodline(left) == plugin.getCustomItems().getBloodline(right)
+                && plugin.getCustomItems().getStoredLevel(left) == plugin.getCustomItems().getStoredLevel(right);
     }
 
     private Player resolveAttacker(EntityDamageByEntityEvent event) {
