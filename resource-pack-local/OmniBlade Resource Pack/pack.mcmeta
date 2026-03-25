@@ -1,0 +1,9 @@
+{
+  "pack": {
+    "description": "Bloodline SMP OmniBlade resource pack",
+    "supported_formats": [63, 88.0],
+    "pack_format": 88.0,
+    "min_format": 63,
+    "max_format": 88.0
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "pack": {
+        "description": "\u00A763D Weapon addon!\n\u00A74MC:1.21.5 or newer",
+		"supported_formats":[63,88.0],
+        "pack_format": 88.0,
+		"min_format": 63,
+		"max_format": 88.0
+    }
+}
