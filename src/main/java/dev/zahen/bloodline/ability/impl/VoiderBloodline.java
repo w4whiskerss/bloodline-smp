@@ -16,7 +16,8 @@ import org.bukkit.potion.PotionEffectType;
 public class VoiderBloodline extends AbstractBloodline {
 
     private static final String VOID_BLINK_KEY = "voider.void_blink";
-    private static final String VOID_FLIGHT_KEY = "voider.void_flight";
+    private static final String DARKENED_KEY = "voider.darkened";
+    private static final String VOID_CONTROL_KEY = "voider.void_control";
     private static final String ENDERMAN_GUARD_KEY = "voider.enderman_guard";
     private static final String VOID_COLLAPSE_KEY = "voider.void_collapse";
 
@@ -65,12 +66,13 @@ public class VoiderBloodline extends AbstractBloodline {
 
     @Override
     public void handleSecondaryAbility(Player player) {
-        if (!manager().consumeVoidSendCharge(player)) {
-            player.sendActionBar(Component.text("Ability on cooldown: " + manager().nextVoidSendRecharge(player), NamedTextColor.RED));
+        if (!startCooldown(player, VOID_CONTROL_KEY, configSeconds("void-control.cooldown-seconds"), configSeconds("void-control.cooldown-reduction-per-level"), 45L)) {
+            cooldown(player, VOID_CONTROL_KEY);
             return;
         }
-        if (!manager().tryVoidSend(player, type() == BloodlineType.UNIVERSAL)) {
-            manager().refundVoidSendCharge(player);
+
+        if (!manager().startVoidControl(player, type() == BloodlineType.UNIVERSAL)) {
+            profile(player).clearCooldown(VOID_CONTROL_KEY);
             player.sendActionBar(Component.text("No valid player target in sight.", NamedTextColor.RED));
             return;
         }
@@ -87,13 +89,14 @@ public class VoiderBloodline extends AbstractBloodline {
 
     @Override
     public void handleSpecialAbility(Player player) {
-        if (!startCooldown(player, VOID_FLIGHT_KEY, configSeconds("void-flight.cooldown-seconds"), configSeconds("void-flight.cooldown-reduction-per-level"), 120L)) {
-            cooldown(player, VOID_FLIGHT_KEY);
+        if (!startCooldown(player, DARKENED_KEY, configSeconds("darkened.cooldown-seconds"), configSeconds("darkened.cooldown-reduction-per-level"), 60L)) {
+            cooldown(player, DARKENED_KEY);
             return;
         }
-        manager().startVoidFlight(player, type() == BloodlineType.UNIVERSAL);
+
+        manager().startDarkened(player, type() == BloodlineType.UNIVERSAL);
         player.getWorld().spawnParticle(Particle.REVERSE_PORTAL, player.getLocation().add(0, 1, 0), 60, 0.4, 0.8, 0.4, 0.05);
-        player.getWorld().playSound(player.getLocation(), Sound.ITEM_ELYTRA_FLYING, SoundCategory.PLAYERS, 1F, 1.1F);
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WARDEN_NEARBY_CLOSE, SoundCategory.PLAYERS, 1F, 0.7F);
         activated(player, "Ability Activated");
     }
 
@@ -139,11 +142,11 @@ public class VoiderBloodline extends AbstractBloodline {
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Daily random level 1 potion effect", NamedTextColor.GRAY),
-                Component.text("Invisibility only applies in the End or during your special", NamedTextColor.GRAY),
-                Component.text("Higher levels strengthen the daily buff and flight/send values", NamedTextColor.GRAY),
+                Component.text("Invisibility only applies in the End", NamedTextColor.GRAY),
+                Component.text("Higher levels strengthen the daily buff and blink values", NamedTextColor.GRAY),
                 Component.text("Primary: Void Blink", NamedTextColor.GRAY),
-                Component.text("Secondary: Void Send (2 charges)", NamedTextColor.GRAY),
-                Component.text("Special: Void Flight", NamedTextColor.GRAY),
+                Component.text("Secondary: Void Control", NamedTextColor.GRAY),
+                Component.text("Special: Darkened", NamedTextColor.GRAY),
                 Component.text("Level 4: Enderman Guard", NamedTextColor.GRAY),
                 Component.text("Level 5: Void Collapse / Void Domain", NamedTextColor.GRAY)
         );

@@ -1,12 +1,12 @@
 # BloodLine SMP Recovery Plan
 
-This document captures the current state of the recovered snapshot and the fastest path back to the last known `2.3.1` feature set.
+This document captures the current state of the recovered snapshot and the fastest path back to the last known `2.3.4` feature set.
 
 ## Snapshot Summary
 
 This workspace is not a clean Git clone. It appears to be a later source snapshot with mixed project ages:
 
-- Server metadata is on `2.3.0`
+- Server metadata is on `2.3.4`
 - Main README is much older and still references `2.0.18`
 - Client mod docs and implementation are older hotkey-only versions
 - Some newer server gameplay systems already exist
@@ -37,7 +37,7 @@ That means recovery should be treated as a selective rebuild, not a full rewrite
 
 ### Already newer than the old README
 
-- `plugin.yml` and Gradle are on `2.3.0`
+- `plugin.yml` and Gradle are on `2.3.4`
 - Earthian uses `root-trap` naming in config
 - Safer `Void Blink` behavior appears present
 - Void Flight boss bar timer exists
@@ -76,7 +76,7 @@ That means recovery should be treated as a selective rebuild, not a full rewrite
 
 - README is outdated
 - Client README is outdated
-- Jar naming is not at the final `BloodLine Server 2.3.1` / `BloodLine Client 2.3.1` state
+- Jar naming is not at the final `BloodLine Server 2.3.4` / `BloodLine Client 2.3.4` state
 - Wiki / docs refresh is not present in this snapshot
 
 ## Likely Partial Or Needs Verification During Rebuild
@@ -186,7 +186,7 @@ Tasks:
 - Update client README
 - Add changelog notes for recovered features
 - Update docs to reflect final config layout
-- Rename build outputs to final `2.3.1` naming
+- Rename build outputs to final `2.3.4` naming
 
 ## Highest-Priority Missing Features
 

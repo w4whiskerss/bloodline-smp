@@ -28,10 +28,10 @@ cd client-mod
 ```
 
 Output:
-- `client-mod/build/libs/BloodLine-Client-2.3.1.jar`
+- `client-mod/build/libs/BloodLine-Client-2.3.4.jar`
 
 Install:
 1. Install Fabric for Minecraft `1.21.11`.
 2. Put the built mod jar in your client `mods` folder.
 3. Put the matching Fabric API jar in the same `mods` folder.
-4. Join the server with `BloodLine Server 2.3.1` installed.
+4. Join the server with `BloodLine Server 2.3.4` installed.

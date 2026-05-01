@@ -104,10 +104,10 @@ bloodlines:
       speed-per-level: 0.1
       explosion-power-per-level: 0.35
     flaming-hands:
-      duration-seconds: 180
-      duration-seconds-per-level: 15
-      burn-seconds: 300
-      burn-seconds-per-level: 30
+      duration-seconds: 45
+      duration-seconds-per-level: 5
+      burn-seconds: 60
+      burn-seconds-per-level: 10
       damage-per-second: 1.0
       damage-per-second-per-level: 0.35
       cooldown-seconds: 600
@@ -199,17 +199,17 @@ bloodlines:
       knockback-per-level: 0.12
       invisibility-seconds: 6
       invisibility-seconds-per-level: 1
-    void-flight:
-      duration-seconds: 300
-      duration-seconds-per-level: 30
-      cooldown-seconds: 1800
-      cooldown-reduction-per-level: 60
-    void-send:
-      range: 48.0
-      range-per-level: 3.0
-      random-radius: 1400
-      random-radius-per-level: 120
-      recharge-hours: 12
+    darkened:
+      radius: 50.0
+      duration-seconds: 5
+      cooldown-seconds: 240
+      cooldown-reduction-per-level: 10
+    void-control:
+      range: 30.0
+      range-per-level: 2.0
+      duration-seconds: 5
+      cooldown-seconds: 180
+      cooldown-reduction-per-level: 10
 
   universal:
     rift-dash:

@@ -79,6 +79,8 @@ public final class BloodlineManager {
     private final Set<UUID> clientHotkeyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> zeroCooldownPlayers = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Long> pendingClientHandshake = new ConcurrentHashMap<>();
+    private final Set<BlockKey> protectedCageBlocks = ConcurrentHashMap.newKeySet();
+    private final Set<BlockKey> protectedHellDomainBlocks = ConcurrentHashMap.newKeySet();
     private final List<PotionEffectType> voidEffects = List.of(
             PotionEffectType.SPEED,
             PotionEffectType.STRENGTH,
@@ -343,6 +345,26 @@ public final class BloodlineManager {
 
     public boolean usesClientHotkeys(Player player) {
         return clientHotkeyPlayers.contains(player.getUniqueId());
+    }
+
+    public boolean isProtectedBloodlineBlock(Block block) {
+        if (block == null) {
+            return false;
+        }
+        BlockKey key = BlockKey.of(block.getLocation());
+        return protectedCageBlocks.contains(key) || protectedHellDomainBlocks.contains(key);
+    }
+
+    public boolean isInsideProtectedHellDomain(Location location) {
+        if (location == null) {
+            return false;
+        }
+        for (HellDominionState state : spartanHellDominions.values()) {
+            if (state.contains(location)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean withdrawBloodlineToBottle(Player player, ItemStack glassBottle) {
@@ -664,28 +686,65 @@ public final class BloodlineManager {
         player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, (int) (durationSeconds * 20L), dolphinsAmplifier, true, true, true));
     }
 
-    public void startSpartanHellDominion(Player player) {
-        int level = profile(player).activeLevel();
-        long durationSeconds = plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds", 10L)
-                + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds-per-level", 1L);
-        Location activationLocation = player.getLocation().clone();
-        Location returnLocation = activationLocation.clone();
-        boolean teleported = false;
-        sendHellDominionTargetsToNether(player, activationLocation);
-        if (plugin.getConfig().getBoolean("bloodlines.spartan.hell-dominion.teleport-fire-world.enabled", false)) {
-            World fireWorld = Bukkit.getWorld(plugin.getConfig().getString("bloodlines.spartan.hell-dominion.teleport-fire-world.world-name", "bloodline_spartan_realm"));
-            if (fireWorld != null) {
-                Location target = new Location(fireWorld, 0.5D, plugin.getConfig().getInt("bloodlines.spartan.hell-dominion.teleport-fire-world.spawn-y", 80), 0.5D, player.getLocation().getYaw(), player.getLocation().getPitch());
-                player.teleport(target);
-                teleported = true;
+    public boolean startSpartanHellDominion(Player player) {
+        Location center = player.getLocation().getBlock().getLocation();
+        int halfSize = 4;
+        int height = 4;
+        if (!hasHellDomainSpace(center, halfSize, height)) {
+            return false;
+        }
+
+        HellDominionState old = spartanHellDominions.remove(player.getUniqueId());
+        if (old != null) {
+            endHellDominion(player, old, true);
+        }
+
+        List<TemporaryTerrainBlock> changed = new ArrayList<>();
+        Set<BlockKey> protectedBlocks = ConcurrentHashMap.newKeySet();
+        World world = player.getWorld();
+        int floorY = center.getBlockY() - 1;
+        for (int x = -halfSize; x <= halfSize; x++) {
+            for (int z = -halfSize; z <= halfSize; z++) {
+                Block floor = world.getBlockAt(center.getBlockX() + x, floorY, center.getBlockZ() + z);
+                changed.add(new TemporaryTerrainBlock(floor.getLocation(), floor.getBlockData().clone()));
+                if (Math.abs(x) == halfSize && Math.abs(z) == halfSize) {
+                    floor.setType(Material.LAVA, false);
+                } else if ((Math.abs(x) + Math.abs(z)) % 3 == 0) {
+                    floor.setType(Material.MAGMA_BLOCK, false);
+                } else {
+                    floor.setType(Material.NETHERRACK, false);
+                }
+                protectedBlocks.add(BlockKey.of(floor.getLocation()));
+
+                if (Math.abs(x) == halfSize || Math.abs(z) == halfSize) {
+                    Block wall = world.getBlockAt(center.getBlockX() + x, floorY + 1, center.getBlockZ() + z);
+                    if (wall.getType().isAir()) {
+                        changed.add(new TemporaryTerrainBlock(wall.getLocation(), wall.getBlockData().clone()));
+                        wall.setType(Material.NETHER_BRICKS, false);
+                        protectedBlocks.add(BlockKey.of(wall.getLocation()));
+                    }
+                }
             }
         }
-        spartanHellDominions.put(player.getUniqueId(), new HellDominionState(System.currentTimeMillis() + durationSeconds * 1000L, returnLocation, teleported));
-        int strengthAmplifier = Math.min(plugin.getConfig().getInt("bloodlines.spartan.hell-dominion.strength-amplifier-at-level-5", 2), level >= 5 ? 2 : Math.max(0, (level - 1) / 2));
-        int speedAmplifier = Math.min(plugin.getConfig().getInt("bloodlines.spartan.hell-dominion.speed-amplifier-at-level-5", 1), level >= 4 ? 1 : 0);
-        player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, (int) (durationSeconds * 20L), strengthAmplifier, true, true, true));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (int) (durationSeconds * 20L), speedAmplifier, true, true, true));
-        player.setFireTicks((int) (durationSeconds * 20L));
+
+        long durationMillis = 60_000L;
+        HellDominionState state = new HellDominionState(
+                System.currentTimeMillis() + durationMillis,
+                world.getName(),
+                center.clone(),
+                halfSize,
+                height,
+                changed,
+                Set.copyOf(protectedBlocks)
+        );
+        spartanHellDominions.put(player.getUniqueId(), state);
+        protectedHellDomainBlocks.addAll(protectedBlocks);
+
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (durationMillis / 50L), 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, (int) (durationMillis / 50L), 1, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (int) (durationMillis / 50L), 0, true, true, true));
+        player.setFireTicks((int) (durationMillis / 50L));
+        return true;
     }
 
     public void startSpartanFlameBarrier(Player player) {
@@ -769,7 +828,7 @@ public final class BloodlineManager {
 
     public void startEarthianWorldbreaker(Player player) {
         UUID uuid = player.getUniqueId();
-        EarthianWorldbreakerState old = earthianWorldbreakers.remove(uuid);
+        earthianWorldbreakers.remove(uuid);
 
         int level = profile(player).activeLevel();
         long durationSeconds = plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.duration-seconds", 8L)
@@ -788,38 +847,31 @@ public final class BloodlineManager {
             nearby.setVelocity(push);
         }
 
+        int tntCount = plugin.getConfig().getInt("bloodlines.earthian.worldbreaker.tnt-count", 12);
+        double tntSpread = plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.tnt-spread", 5.0D);
+        for (int i = 0; i < tntCount; i++) {
+            Location spawn = player.getLocation().clone().add(
+                    ThreadLocalRandom.current().nextDouble(-tntSpread, tntSpread),
+                    0.5D + ThreadLocalRandom.current().nextDouble(0.0D, 1.6D),
+                    ThreadLocalRandom.current().nextDouble(-tntSpread, tntSpread)
+            );
+            TNTPrimed tnt = player.getWorld().spawn(spawn, TNTPrimed.class, primed -> {
+                primed.setFuseTicks(26 + ThreadLocalRandom.current().nextInt(18));
+                primed.setYield(0.0F);
+                primed.setSource(player);
+                primed.addScoreboardTag("bloodline_worldbreaker_tnt");
+            });
+            Vector velocity = new Vector(
+                    ThreadLocalRandom.current().nextDouble(-0.25D, 0.25D),
+                    ThreadLocalRandom.current().nextDouble(0.18D, 0.45D),
+                    ThreadLocalRandom.current().nextDouble(-0.25D, 0.25D)
+            );
+            tnt.setVelocity(velocity);
+        }
+
         int resistanceAmplifier = Math.min(plugin.getConfig().getInt("bloodlines.earthian.worldbreaker.resistance-amplifier-at-level-5", 2), level >= 5 ? 2 : 1);
         player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) (durationSeconds * 20L), resistanceAmplifier, true, true, true));
         earthianWorldbreakers.put(uuid, new EarthianWorldbreakerState(System.currentTimeMillis() + durationSeconds * 1000L, player.getLocation().clone(), radius, List.of()));
-
-        int tntCount = plugin.getConfig().getInt("bloodlines.earthian.worldbreaker.tnt-count", 12)
-                + Math.max(0, level - 1) * plugin.getConfig().getInt("bloodlines.earthian.worldbreaker.tnt-count-per-level", 2);
-        double tntSpawnRadius = plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.tnt-spawn-radius", 4.0D)
-                + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.tnt-spawn-radius-per-level", 0.35D);
-        int fuseTicks = Math.max(10, plugin.getConfig().getInt("bloodlines.earthian.worldbreaker.tnt-fuse-ticks", 32));
-        float explosionPower = (float) (plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.explosion-power", 4.0D)
-                + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.earthian.worldbreaker.explosion-power-per-level", 0.45D));
-        Location center = player.getLocation().clone();
-        for (int index = 0; index < tntCount; index++) {
-            double angle = (Math.PI * 2D * index) / Math.max(1, tntCount);
-            double distance = tntSpawnRadius * (0.65D + ThreadLocalRandom.current().nextDouble(0.45D));
-            Location spawnLocation = center.clone().add(
-                    Math.cos(angle) * distance,
-                    0.2D + ThreadLocalRandom.current().nextDouble(0.6D),
-                    Math.sin(angle) * distance
-            );
-            player.getWorld().spawn(spawnLocation, TNTPrimed.class, tnt -> {
-                tnt.setFuseTicks(fuseTicks + ThreadLocalRandom.current().nextInt(0, 12));
-                tnt.setYield(explosionPower);
-                tnt.setIsIncendiary(false);
-                tnt.setSource(player);
-                tnt.setVelocity(new Vector(
-                        ThreadLocalRandom.current().nextDouble(-0.12D, 0.12D),
-                        ThreadLocalRandom.current().nextDouble(0.18D, 0.35D),
-                        ThreadLocalRandom.current().nextDouble(-0.12D, 0.12D)
-                ));
-            });
-        }
         player.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, player.getLocation(), 6);
     }
 
@@ -835,6 +887,7 @@ public final class BloodlineManager {
         }
         Location center = target.getLocation().getBlock().getLocation();
         List<TemporaryTerrainBlock> changed = new ArrayList<>();
+        long durationTicks = 80L;
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
                 for (int y = 0; y <= 3; y++) {
@@ -848,13 +901,18 @@ public final class BloodlineManager {
                     }
                     changed.add(new TemporaryTerrainBlock(block.getLocation(), block.getBlockData().clone()));
                     block.setType(Material.OBSIDIAN, false);
+                    protectedCageBlocks.add(BlockKey.of(block.getLocation()));
                 }
             }
         }
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 120, 4, true, true, true));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 120, 1, true, true, true));
+        target.teleport(center.clone().add(0.5D, 0.1D, 0.5D));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, (int) durationTicks, 4, true, true, true));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, (int) durationTicks, 1, true, true, true));
         target.getWorld().spawnParticle(Particle.PORTAL, target.getLocation().add(0, 1, 0), 40, 0.7, 1.2, 0.7, 0.03);
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> restoreTemporaryTerrain(new EarthianWorldbreakerState(0L, center, 0D, changed)), 120L);
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            restoreTemporaryTerrain(new EarthianWorldbreakerState(0L, center, 0D, changed));
+            changed.forEach(block -> protectedCageBlocks.remove(BlockKey.of(block.location())));
+        }, durationTicks);
         return true;
     }
 
@@ -868,16 +926,9 @@ public final class BloodlineManager {
         if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
             return false;
         }
-        Location targetLoc = target.getLocation().clone();
-        for (int depth = 1; depth <= 2; depth++) {
-            Location bury = targetLoc.clone().subtract(0, depth, 0);
-            if (bury.getBlock().isSolid()) {
-                target.teleport(bury.add(0.5D, 0.1D, 0.5D));
-                break;
-            }
-        }
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 6, true, true, true));
         target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 2, true, true, true));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, 140, 2, true, true, true));
         target.damage(8.0D, player);
         target.getWorld().spawnParticle(Particle.BLOCK, target.getLocation().add(0, 0.1, 0), 90, 0.7, 0.4, 0.7, target.getLocation().getBlock().getBlockData());
         return true;
@@ -919,13 +970,12 @@ public final class BloodlineManager {
             for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(5.5D, entity -> entity != player)) {
                 nearby.damage(7.0D, player);
                 nearby.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 40, 0, true, true, true));
-                nearby.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 80, 0, true, true, true));
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 0, true, true, true));
             }
             player.getWorld().spawnParticle(Particle.DRAGON_BREATH, player.getLocation().add(0, 1, 0), 140, 1.3, 0.8, 1.3, 0.05);
             player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.PLAYERS, 0.6F, 1.3F);
         } else {
-            startVoidFlight(player, false);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 140, 0, true, true, true));
+            startDarkened(player, false);
             for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(6.5D, entity -> entity != player)) {
                 nearby.damage(8.5D, player);
                 nearby.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 120, 0, true, true, true));
@@ -973,10 +1023,44 @@ public final class BloodlineManager {
         }
         long now = System.currentTimeMillis();
         return switch (type) {
-            case VOIDER -> voidFlightEndsAt.getOrDefault(player.getUniqueId(), 0L) > now;
+            case VOIDER -> false;
             case UNIVERSAL -> universalAscensionUntil.getOrDefault(player.getUniqueId(), 0L) > now;
             default -> false;
         };
+    }
+
+    public boolean startVoidControl(Player player, boolean universal) {
+        int level = profile(player).activeLevel();
+        double range = plugin.getConfig().getDouble("bloodlines.voider.void-control.range", 30.0D)
+                + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.voider.void-control.range-per-level", 2.0D);
+        if (universal) {
+            range *= 0.85D;
+        }
+        RayTraceResult trace = player.getWorld().rayTraceEntities(
+                player.getEyeLocation(),
+                player.getEyeLocation().getDirection(),
+                range,
+                entity -> entity instanceof LivingEntity && entity != player
+        );
+        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
+            return false;
+        }
+        int durationTicks = plugin.getConfig().getInt("bloodlines.voider.void-control.duration-seconds", 5) * 20;
+        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, durationTicks, 0, true, true, true));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, 255, true, true, true));
+        target.getWorld().spawnParticle(Particle.PORTAL, target.getLocation().add(0, 1, 0), 36, 0.4, 0.7, 0.4, 0.04);
+        return true;
+    }
+
+    public void startDarkened(Player player, boolean universal) {
+        double radius = plugin.getConfig().getDouble("bloodlines.voider.darkened.radius", 50.0D);
+        if (universal) {
+            radius *= 0.8D;
+        }
+        int durationTicks = plugin.getConfig().getInt("bloodlines.voider.darkened.duration-seconds", 5) * 20;
+        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(radius, entity -> entity != player)) {
+            nearby.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, durationTicks, 0, true, true, true));
+        }
     }
 
     public boolean tryVoidSend(Player player, boolean universal) {
@@ -1497,8 +1581,10 @@ public final class BloodlineManager {
                             + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.aura-radius-per-level", 0.2D);
                     double auraDamage = plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.aura-damage-per-second", 1.0D)
                             + Math.max(0, level - 1) * plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.aura-damage-per-second-per-level", 0.25D);
-                    player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1, 0), 12, 0.5, 0.7, 0.5, 0.03);
-                    for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(auraRadius, entity -> entity != player)) {
+                    Location domainCenter = dominion.center().clone().add(0.5D, 1.0D, 0.5D);
+                    player.getWorld().spawnParticle(Particle.FLAME, domainCenter, 12, 1.8, 0.7, 1.8, 0.03);
+                    player.getWorld().spawnParticle(Particle.ASH, domainCenter, 10, 1.8, 0.5, 1.8, 0.01);
+                    for (LivingEntity nearby : domainCenter.getNearbyLivingEntities(auraRadius, entity -> entity != player)) {
                         nearby.damage(auraDamage, player);
                         nearby.setFireTicks(Math.max(nearby.getFireTicks(), 40));
                     }
@@ -1635,9 +1721,6 @@ public final class BloodlineManager {
         if (key == null) {
             return "N/A";
         }
-        if (key.equals("voider.void_send")) {
-            return "Charges " + profile.voidSendCharges() + "/2";
-        }
         if (key.equals("voider.void_blink_hit")) {
             Long until = voidBlinkHits.get(profile.uuid());
             if (until == null || until <= System.currentTimeMillis()) {
@@ -1665,7 +1748,7 @@ public final class BloodlineManager {
             case SPARTAN -> "spartan.flaming_hands";
             case EARTHIAN -> "earthian.root_prison";
             case UNIVERSAL -> "universal.blood_fusion";
-            case VOIDER -> "voider.void_send";
+            case VOIDER -> "voider.void_control";
             default -> null;
         };
     }
@@ -1675,7 +1758,7 @@ public final class BloodlineManager {
             case AQUA -> "aqua.tidal_surge";
             case SPARTAN -> "spartan.hell_dominion";
             case EARTHIAN -> "earthian.worldbreaker";
-            case VOIDER -> "voider.void_flight";
+            case VOIDER -> "voider.darkened";
             case UNIVERSAL -> "universal.ascension";
             default -> null;
         };
@@ -2175,10 +2258,9 @@ public final class BloodlineManager {
     }
 
     private void endHellDominion(Player player, HellDominionState dominion, boolean teleportBack) {
+        restoreTemporaryTerrain(new EarthianWorldbreakerState(0L, dominion.center(), 0D, dominion.changedBlocks()));
+        protectedHellDomainBlocks.removeAll(dominion.protectedBlocks());
         if (player != null) {
-            if (teleportBack && dominion.teleported() && dominion.returnLocation() != null) {
-                player.teleport(dominion.returnLocation());
-            }
             player.setFireTicks(0);
         }
     }
@@ -2207,6 +2289,24 @@ public final class BloodlineManager {
         for (TemporaryTerrainBlock changed : state.terrain()) {
             changed.location().getBlock().setBlockData(changed.originalData(), false);
         }
+    }
+
+    private boolean hasHellDomainSpace(Location center, int halfSize, int height) {
+        World world = center.getWorld();
+        if (world == null) {
+            return false;
+        }
+        for (int x = -halfSize; x <= halfSize; x++) {
+            for (int z = -halfSize; z <= halfSize; z++) {
+                for (int y = 0; y <= height; y++) {
+                    Block block = world.getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
+                    if (!block.isPassable() && !block.getType().isAir()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     public void setZeroCooldownMode(Player player, boolean enabled) {
@@ -2273,9 +2373,7 @@ public final class BloodlineManager {
         PlayerProfile profile = profile(player);
         BloodlineType active = profile.activeBloodline();
         long primaryRemaining = remainingCooldown(profile, primaryKey(active));
-        long secondaryRemaining = active == BloodlineType.VOIDER
-                ? Math.max(0L, profile.voidSendCharges() > 0 ? 0L : nextVoidRechargeMillis(profile))
-                : remainingCooldown(profile, secondaryKey(active));
+        long secondaryRemaining = remainingCooldown(profile, secondaryKey(active));
         long specialRemaining = remainingCooldown(profile, specialKey(active));
         long fourthRemaining = remainingCooldown(profile, fourthKey(active));
         long fifthRemaining = remainingCooldown(profile, fifthKey(active));
@@ -2299,7 +2397,7 @@ public final class BloodlineManager {
                 "specialRemaining", Long.toString(specialRemaining),
                 "fourthRemaining", Long.toString(fourthRemaining),
                 "fifthRemaining", Long.toString(fifthRemaining),
-                "secondaryCharges", active == BloodlineType.VOIDER ? Integer.toString(profile.voidSendCharges()) : "0",
+                "secondaryCharges", "0",
                 "timerLabel", currentTimerLabel(active),
                 "timerRemaining", Long.toString(currentTimerRemaining(player, active)),
                 "timerTotal", Long.toString(currentTimerTotal(player, active)),
@@ -2402,7 +2500,7 @@ public final class BloodlineManager {
             case AQUA -> "Suffocation Curse";
             case SPARTAN -> "Flaming Hands";
             case EARTHIAN -> "Root Trap";
-            case VOIDER -> "Void Send";
+            case VOIDER -> "Void Control";
             case UNIVERSAL -> "Blood Fusion";
         };
     }
@@ -2410,9 +2508,9 @@ public final class BloodlineManager {
     private String specialAbilityLabel(BloodlineType type) {
         return switch (type) {
             case AQUA -> "Tidal Surge";
-            case SPARTAN -> "Hell Dominion";
+            case SPARTAN -> "Hell Domain";
             case EARTHIAN -> "Worldbreaker";
-            case VOIDER -> "Void Flight";
+            case VOIDER -> "Darkened";
             case UNIVERSAL -> "Ascension";
         };
     }
@@ -2440,8 +2538,8 @@ public final class BloodlineManager {
 
     private String currentTimerLabel(BloodlineType active) {
         return switch (active) {
-            case VOIDER -> "Void Flight";
-            case SPARTAN -> plugin.getGameplaySettings().isPublicMode() ? "Inferno Rush" : "Hell Dominion";
+            case VOIDER -> "";
+            case SPARTAN -> "Hell Domain";
             case AQUA -> "Tidal Surge";
             case EARTHIAN -> "Worldbreaker";
             case UNIVERSAL -> "Ascension";
@@ -2452,7 +2550,7 @@ public final class BloodlineManager {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
         return switch (active) {
-            case VOIDER -> Math.max(0L, voidFlightEndsAt.getOrDefault(uuid, 0L) - now);
+            case VOIDER -> 0L;
             case SPARTAN -> {
                 HellDominionState state = spartanHellDominions.get(uuid);
                 yield state == null ? 0L : Math.max(0L, state.endsAt() - now);
@@ -2472,10 +2570,8 @@ public final class BloodlineManager {
     private long currentTimerTotal(Player player, BloodlineType active) {
         int level = Math.max(1, profile(player).activeLevel());
         return switch (active) {
-            case VOIDER -> (plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds", 300L)
-                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds-per-level", 30L)) * 1000L;
-            case SPARTAN -> (plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds", 10L)
-                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds-per-level", 1L)) * 1000L;
+            case VOIDER -> 0L;
+            case SPARTAN -> 60_000L;
             case AQUA -> (plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.duration-seconds", 10L)
                     + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.duration-seconds-per-level", 1L)) * 1000L;
             case EARTHIAN -> (plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.duration-seconds", 8L)
@@ -2502,12 +2598,36 @@ public final class BloodlineManager {
     private record HeldFireballState(long expiresAt) {
     }
 
-    private record HellDominionState(long endsAt, Location returnLocation, boolean teleported) {
+    private record HellDominionState(
+            long endsAt,
+            String worldName,
+            Location center,
+            int halfSize,
+            int height,
+            List<TemporaryTerrainBlock> changedBlocks,
+            Set<BlockKey> protectedBlocks
+    ) {
+        private boolean contains(Location location) {
+            if (location == null || location.getWorld() == null || !location.getWorld().getName().equals(worldName)) {
+                return false;
+            }
+            return Math.abs(location.getBlockX() - center.getBlockX()) <= halfSize
+                    && Math.abs(location.getBlockZ() - center.getBlockZ()) <= halfSize
+                    && location.getBlockY() >= center.getBlockY() - 1
+                    && location.getBlockY() <= center.getBlockY() + height;
+        }
     }
 
     private record TemporaryTerrainBlock(Location location, BlockData originalData) {
     }
 
     private record EarthianWorldbreakerState(long endsAt, Location center, double radius, List<TemporaryTerrainBlock> terrain) {
+    }
+
+    private record BlockKey(String world, int x, int y, int z) {
+        private static BlockKey of(Location location) {
+            String worldName = location.getWorld() == null ? "unknown" : location.getWorld().getName();
+            return new BlockKey(worldName, location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        }
     }
 }

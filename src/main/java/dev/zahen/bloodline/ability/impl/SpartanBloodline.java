@@ -84,7 +84,11 @@ public final class SpartanBloodline extends AbstractBloodline {
             return;
         }
 
-        manager().startSpartanHellDominion(player);
+        if (!manager().startSpartanHellDominion(player)) {
+            profile(player).clearCooldown(HELL_DOMINION_KEY);
+            manager().showPopup(player, "Not enough space to spawn Hell Domain.", NamedTextColor.RED);
+            return;
+        }
         player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1, 0), 90, 0.8, 1.0, 0.8, 0.06);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 1F, 0.8F);
         activated(player, "Ability Activated");
@@ -135,7 +139,7 @@ public final class SpartanBloodline extends AbstractBloodline {
                 Component.text("Late-level passive Strength", NamedTextColor.GRAY),
                 Component.text("Primary: Fireball", NamedTextColor.GRAY),
                 Component.text("Secondary: Flaming Hands", NamedTextColor.GRAY),
-                Component.text("Special: Hell Dominion", NamedTextColor.GRAY),
+                Component.text("Special: Hell Domain", NamedTextColor.GRAY),
                 Component.text("Level 4: Flame Barrier", NamedTextColor.GRAY),
                 Component.text("Level 5: Inferno Rush / Crimson Domain", NamedTextColor.GRAY)
         );

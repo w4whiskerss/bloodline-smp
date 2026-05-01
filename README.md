@@ -4,7 +4,7 @@
 
 <br />
 
-[![live version](https://img.shields.io/badge/version-2.3.1-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
+[![live version](https://img.shields.io/badge/version-2.3.4-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
 [![paper](https://img.shields.io/badge/paper-1.21.11-7f1d1d?style=flat-square)](https://papermc.io/)
 [![java](https://img.shields.io/badge/java-21-991b1b?style=flat-square)](https://adoptium.net/)
 

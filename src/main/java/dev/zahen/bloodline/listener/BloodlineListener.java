@@ -13,8 +13,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockFromToEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -27,6 +31,8 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -187,6 +193,13 @@ public final class BloodlineListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        if (event.getEntity().getScoreboardTags().contains("bloodline_worldbreaker_tnt")) {
+            event.blockList().clear();
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
     public void onVelocity(PlayerVelocityEvent event) {
         manager.handleVelocity(event.getPlayer());
     }
@@ -288,6 +301,42 @@ public final class BloodlineListener implements Listener {
             if (expected == null || !sameCustomItem(current, expected)) {
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockBreak(BlockBreakEvent event) {
+        if (manager.isProtectedBloodlineBlock(event.getBlock())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (manager.isInsideProtectedHellDomain(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+        if (manager.isInsideProtectedHellDomain(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBucketFill(PlayerBucketFillEvent event) {
+        if (manager.isInsideProtectedHellDomain(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFluidFlow(BlockFromToEvent event) {
+        if (manager.isInsideProtectedHellDomain(event.getBlock().getLocation())
+                || manager.isInsideProtectedHellDomain(event.getToBlock().getLocation())) {
+            event.setCancelled(true);
         }
     }
 
