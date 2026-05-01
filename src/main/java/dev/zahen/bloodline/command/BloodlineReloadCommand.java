@@ -17,6 +17,7 @@ public final class BloodlineReloadCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         plugin.reloadConfig();
+        plugin.reloadGameplaySettings();
         plugin.initializeSpecialWorlds();
         plugin.getGracePeriodManager().reloadFromConfig();
         sender.sendMessage("BloodlineSMP config reloaded.");

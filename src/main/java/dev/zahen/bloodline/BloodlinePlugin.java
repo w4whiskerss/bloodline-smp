@@ -7,6 +7,7 @@ import dev.zahen.bloodline.command.BloodlineModCommand;
 import dev.zahen.bloodline.command.BloodlineReloadCommand;
 import dev.zahen.bloodline.command.BloodlineTestCommand;
 import dev.zahen.bloodline.command.GraceCommand;
+import dev.zahen.bloodline.config.GameplaySettings;
 import dev.zahen.bloodline.data.PlayerDataManager;
 import dev.zahen.bloodline.gui.AdminPanelGui;
 import dev.zahen.bloodline.gui.BloodlineGui;
@@ -15,6 +16,7 @@ import dev.zahen.bloodline.item.CustomItems;
 import dev.zahen.bloodline.listener.BloodlineListener;
 import dev.zahen.bloodline.manager.BloodlineManager;
 import dev.zahen.bloodline.manager.GracePeriodManager;
+import dev.zahen.bloodline.network.ClientChannelBridge;
 import dev.zahen.bloodline.update.PluginUpdater;
 import dev.zahen.bloodline.world.WaterWorldGenerator;
 import org.bukkit.Bukkit;
@@ -33,12 +35,15 @@ public final class BloodlinePlugin extends JavaPlugin {
     private TestItemsGui testItemsGui;
     private CustomItems customItems;
     private PluginUpdater pluginUpdater;
+    private GameplaySettings gameplaySettings;
+    private ClientChannelBridge clientChannelBridge;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        reloadGameplaySettings();
         initializeSpecialWorlds();
 
         this.customItems = new CustomItems(this);
@@ -49,6 +54,8 @@ public final class BloodlinePlugin extends JavaPlugin {
         this.gracePeriodManager = new GracePeriodManager(this);
         this.bloodlineManager = new BloodlineManager(this);
         this.pluginUpdater = new PluginUpdater(this);
+        this.clientChannelBridge = new ClientChannelBridge(this);
+        clientChannelBridge.register();
 
         BloodlineListener listener = new BloodlineListener(this);
         getServer().getPluginManager().registerEvents(listener, this);
@@ -100,7 +107,7 @@ public final class BloodlinePlugin extends JavaPlugin {
             modCommand.setTabCompleter(executor);
         }
         AbilityCommand abilityCommand = new AbilityCommand(this);
-        for (String commandName : java.util.List.of("ability1", "ability2", "ability3", "primary", "secondary", "special")) {
+        for (String commandName : java.util.List.of("ability1", "ability2", "ability3", "ability4", "ability5", "primary", "secondary", "special", "abilityfour", "abilityfive")) {
             PluginCommand ability = getCommand(commandName);
             if (ability != null) {
                 ability.setExecutor(abilityCommand);
@@ -116,6 +123,9 @@ public final class BloodlinePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (clientChannelBridge != null) {
+            clientChannelBridge.unregister();
+        }
         if (bloodlineManager != null) {
             bloodlineManager.shutdown();
         }
@@ -153,6 +163,18 @@ public final class BloodlinePlugin extends JavaPlugin {
 
     public CustomItems getCustomItems() {
         return customItems;
+    }
+
+    public GameplaySettings getGameplaySettings() {
+        return gameplaySettings;
+    }
+
+    public void reloadGameplaySettings() {
+        this.gameplaySettings = GameplaySettings.fromConfig(getConfig());
+    }
+
+    public boolean isBloodlineGameplayDisabled(org.bukkit.World world) {
+        return gameplaySettings != null && gameplaySettings.isBloodlineGameplayDisabled(world);
     }
 
     public void initializeSpecialWorlds() {

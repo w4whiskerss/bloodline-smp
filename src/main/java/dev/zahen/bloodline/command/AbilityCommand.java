@@ -21,12 +21,17 @@ public final class AbilityCommand implements TabExecutor {
             sender.sendMessage("Players only.");
             return true;
         }
+        if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
+            return true;
+        }
 
         String name = command.getName().toLowerCase();
         switch (name) {
             case "ability1", "primary" -> plugin.getBloodlineManager().triggerPrimary(player);
             case "ability2", "secondary" -> plugin.getBloodlineManager().triggerSecondary(player);
             case "ability3", "special" -> plugin.getBloodlineManager().triggerSpecial(player);
+            case "ability4", "abilityfour" -> plugin.getBloodlineManager().triggerFourth(player);
+            case "ability5", "abilityfive" -> plugin.getBloodlineManager().triggerFifth(player);
             default -> {
             }
         }

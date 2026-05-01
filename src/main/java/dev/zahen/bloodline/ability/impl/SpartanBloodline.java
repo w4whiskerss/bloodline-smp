@@ -18,6 +18,8 @@ public final class SpartanBloodline extends AbstractBloodline {
     private static final String FIREBALL_KEY = "spartan.fireball";
     private static final String FLAMING_HANDS_KEY = "spartan.flaming_hands";
     private static final String HELL_DOMINION_KEY = "spartan.hell_dominion";
+    private static final String FLAME_BARRIER_KEY = "spartan.flame_barrier";
+    private static final String INFERNO_RUSH_KEY = "spartan.inferno_rush";
 
     public SpartanBloodline(BloodlinePlugin plugin) {
         super(plugin, BloodlineType.SPARTAN);
@@ -89,13 +91,53 @@ public final class SpartanBloodline extends AbstractBloodline {
     }
 
     @Override
+    public boolean supportsFourthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFourthAbility(Player player) {
+        if (level(player) < 4) {
+            manager().showPopup(player, "Flame Barrier unlocks at level 4.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, FLAME_BARRIER_KEY, 180L, 8L, 60L)) {
+            cooldown(player, FLAME_BARRIER_KEY);
+            return;
+        }
+        manager().startSpartanFlameBarrier(player);
+        activated(player, "Flame Barrier");
+    }
+
+    @Override
+    public boolean supportsFifthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFifthAbility(Player player) {
+        if (level(player) < 5) {
+            manager().showPopup(player, "Fifth Spartan ability unlocks at level 5.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, INFERNO_RUSH_KEY, 300L, 10L, 90L)) {
+            cooldown(player, INFERNO_RUSH_KEY);
+            return;
+        }
+        manager().startSpartanFinalAbility(player);
+        activated(player, plugin.getGameplaySettings().isPublicMode() ? "Inferno Rush" : "Crimson Domain");
+    }
+
+    @Override
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Permanent Fire Resistance", NamedTextColor.GRAY),
                 Component.text("Late-level passive Strength", NamedTextColor.GRAY),
                 Component.text("Primary: Fireball", NamedTextColor.GRAY),
                 Component.text("Secondary: Flaming Hands", NamedTextColor.GRAY),
-                Component.text("Special: Shift + Double Jump for Hell Dominion", NamedTextColor.GRAY)
+                Component.text("Special: Hell Dominion", NamedTextColor.GRAY),
+                Component.text("Level 4: Flame Barrier", NamedTextColor.GRAY),
+                Component.text("Level 5: Inferno Rush / Crimson Domain", NamedTextColor.GRAY)
         );
     }
 }

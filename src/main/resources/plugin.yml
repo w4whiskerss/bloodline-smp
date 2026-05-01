@@ -1,5 +1,5 @@
 name: BloodlineSMP
-version: 2.3.0
+version: 2.3.1
 main: dev.zahen.bloodline.BloodlinePlugin
 api-version: '1.21'
 author: w4whiskers
@@ -22,6 +22,14 @@ commands:
     description: Triggers your special bloodline ability
     usage: /ability3
     aliases: [special]
+  ability4:
+    description: Triggers your fourth bloodline ability
+    usage: /ability4
+    aliases: [abilityfour]
+  ability5:
+    description: Triggers your fifth bloodline ability
+    usage: /ability5
+    aliases: [abilityfive]
   bloodlinemod:
     description: Internal client hotkey handshake
     usage: /bloodlinemod

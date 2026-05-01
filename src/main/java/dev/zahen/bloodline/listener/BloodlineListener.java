@@ -25,6 +25,7 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerVelocityEvent;
@@ -53,6 +54,11 @@ public final class BloodlineListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    public void onHeldItemChange(PlayerItemHeldEvent event) {
+        manager.pushClientState(event.getPlayer(), false);
+    }
+
+    @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         manager.handleMove(event.getPlayer(), event.getFrom(), event.getTo());
     }
@@ -69,6 +75,9 @@ public final class BloodlineListener implements Listener {
         }
 
         Player player = event.getPlayer();
+        if (manager.isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         ItemStack item = event.getItem();
         Action action = event.getAction();
         String itemType = plugin.getCustomItems().getItemType(item);
@@ -117,6 +126,9 @@ public final class BloodlineListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         Player player = event.getPlayer();
+        if (manager.isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         if (event.getHand() != EquipmentSlot.HAND || !player.isSneaking() || manager.usesClientHotkeys(player)) {
             return;
         }
@@ -127,6 +139,9 @@ public final class BloodlineListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onSwapHands(PlayerSwapHandItemsEvent event) {
         Player player = event.getPlayer();
+        if (manager.isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         if (!player.isSneaking() || manager.usesClientHotkeys(player)) {
             return;
         }
@@ -141,6 +156,9 @@ public final class BloodlineListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent event) {
         Player attacker = resolveAttacker(event);
+        if (attacker != null && manager.isBloodlineGameplayDisabled(attacker)) {
+            return;
+        }
         if (plugin.getGracePeriodManager().isGraceActive() && attacker != null && event.getEntity() instanceof Player) {
             event.setCancelled(true);
             attacker.sendActionBar(net.kyori.adventure.text.Component.text("PvP is disabled during grace period.", net.kyori.adventure.text.format.NamedTextColor.RED));
@@ -180,6 +198,9 @@ public final class BloodlineListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onConsume(PlayerItemConsumeEvent event) {
+        if (manager.isBloodlineGameplayDisabled(event.getPlayer())) {
+            return;
+        }
         ItemStack item = event.getItem();
         String itemType = plugin.getCustomItems().getItemType(item);
         if (CustomItems.TYPE_TRAIT_POTION.equals(itemType)) {
@@ -200,7 +221,7 @@ public final class BloodlineListener implements Listener {
             return;
         }
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (plugin.getAdminPanelGui().isListTitle(title) || plugin.getAdminPanelGui().isEditTitle(title)) {
+        if (plugin.getAdminPanelGui().isListTitle(title) || plugin.getAdminPanelGui().isEditTitle(title) || plugin.getAdminPanelGui().isDebugTitle(title)) {
             event.setCancelled(true);
             plugin.getAdminPanelGui().handleClick(player, event.getClickedInventory(), event.getSlot());
             return;
@@ -211,6 +232,9 @@ public final class BloodlineListener implements Listener {
             return;
         }
         if (!title.equals(BloodlineGui.TITLE)) {
+            return;
+        }
+        if (manager.isBloodlineGameplayDisabled(player)) {
             return;
         }
         event.setCancelled(true);
@@ -239,6 +263,7 @@ public final class BloodlineListener implements Listener {
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         if (plugin.getAdminPanelGui().isListTitle(title)
                 || plugin.getAdminPanelGui().isEditTitle(title)
+                || plugin.getAdminPanelGui().isDebugTitle(title)
                 || plugin.getTestItemsGui().isTitle(title)
                 || title.equals(BloodlineGui.TITLE)) {
             event.setCancelled(true);
@@ -247,6 +272,10 @@ public final class BloodlineListener implements Listener {
 
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
+        if (event.getView().getPlayer() instanceof Player player && manager.isBloodlineGameplayDisabled(player)) {
+            event.getInventory().setResult(null);
+            return;
+        }
         ItemStack result = manager.resolveCustomCraftResult(event.getInventory().getMatrix());
         event.getInventory().setResult(result);
     }

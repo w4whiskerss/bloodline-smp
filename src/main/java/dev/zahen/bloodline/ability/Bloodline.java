@@ -21,5 +21,19 @@ public interface Bloodline {
     default void handleSpecialAbility(Player player) {
     }
 
+    default boolean supportsFourthAbility() {
+        return false;
+    }
+
+    default void handleFourthAbility(Player player) {
+    }
+
+    default boolean supportsFifthAbility() {
+        return false;
+    }
+
+    default void handleFifthAbility(Player player) {
+    }
+
     List<Component> describePassives(Player player);
 }

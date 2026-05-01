@@ -4,7 +4,7 @@
 
 <br />
 
-[![live version](https://img.shields.io/badge/version-2.0.18-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
+[![live version](https://img.shields.io/badge/version-2.3.1-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
 [![paper](https://img.shields.io/badge/paper-1.21.11-7f1d1d?style=flat-square)](https://papermc.io/)
 [![java](https://img.shields.io/badge/java-21-991b1b?style=flat-square)](https://adoptium.net/)
 
@@ -18,7 +18,7 @@
 
 Custom **PaperMC PvP plugin** for **Minecraft 1.21.11** built around bloodlines, progression, chaos, and creator-style SMP gameplay.
 
-Bloodline SMP gives each player **one active bloodline**, custom passives, ability scaling up to **Level 5**, PvP drops, admin tools, grace period controls, and an optional client hotkey mod.
+BloodLine SMP gives each player **one active bloodline**, custom passives, ability scaling up to **Level 5**, PvP drops, admin tools, grace period controls, world gating, gameplay modes, and a matching client mod with a custom HUD.
 
 </div>
 
@@ -30,11 +30,13 @@ Bloodline SMP is a full custom **Paper plugin** built for **Minecraft 1.21.11** 
 
 Players are assigned one bloodline and fight, level up, steal progress, switch through trait potions, and unlock high-impact abilities built around PvP gameplay.
 
-This repo also includes an optional **Fabric client hotkey mod** for custom ability binds:
+This repo also includes the matching **Fabric client mod** for:
 
-- `Shift + V` -> Primary
-- `Shift + B` -> Secondary
-- `Shift + N` -> Special
+- hidden hotkey networking
+- custom HUD and popup feedback
+- cooldown and timer rendering
+- OmniBlade HUD override
+- rebindable keybinds
 
 ---
 
@@ -48,7 +50,9 @@ This repo also includes an optional **Fabric client hotkey mod** for custom abil
 - Admin GUI for editing player bloodlines and levels
 - Grace period system with boss bar countdown
 - Discord webhook support
-- Optional custom client hotkey mod
+- Gameplay modes: `scripted` and `public`
+- Disabled-world support
+- Optional matching client HUD mod
 
 ---
 

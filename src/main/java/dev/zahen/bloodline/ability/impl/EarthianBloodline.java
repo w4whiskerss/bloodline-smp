@@ -20,6 +20,8 @@ public final class EarthianBloodline extends AbstractBloodline {
     private static final String GROUND_SLAM_KEY = "earthian.ground_slam";
     private static final String ROOT_TRAP_KEY = "earthian.root_prison";
     private static final String WORLDBREAKER_KEY = "earthian.worldbreaker";
+    private static final String OBSIDIAN_CAGE_KEY = "earthian.obsidian_cage";
+    private static final String CONSUME_KEY = "earthian.consume";
 
     public EarthianBloodline(BloodlinePlugin plugin) {
         super(plugin, BloodlineType.EARTHIAN);
@@ -109,12 +111,60 @@ public final class EarthianBloodline extends AbstractBloodline {
     }
 
     @Override
+    public boolean supportsFourthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFourthAbility(Player player) {
+        if (level(player) < 4) {
+            manager().showPopup(player, "Obsidian Cage unlocks at level 4.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, OBSIDIAN_CAGE_KEY, 240L, 10L, 75L)) {
+            cooldown(player, OBSIDIAN_CAGE_KEY);
+            return;
+        }
+        if (!manager().startObsidianCage(player)) {
+            profile(player).clearCooldown(OBSIDIAN_CAGE_KEY);
+            manager().showPopup(player, "No target for Obsidian Cage.", NamedTextColor.RED);
+            return;
+        }
+        activated(player, "Obsidian Cage");
+    }
+
+    @Override
+    public boolean supportsFifthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFifthAbility(Player player) {
+        if (level(player) < 5) {
+            manager().showPopup(player, "Consume unlocks at level 5.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, CONSUME_KEY, 300L, 12L, 90L)) {
+            cooldown(player, CONSUME_KEY);
+            return;
+        }
+        if (!manager().startConsume(player)) {
+            profile(player).clearCooldown(CONSUME_KEY);
+            manager().showPopup(player, "No target for Consume.", NamedTextColor.RED);
+            return;
+        }
+        activated(player, "Consume");
+    }
+
+    @Override
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Resistance I always active", NamedTextColor.GRAY),
                 Component.text("Reduced knockback and reduced fall damage", NamedTextColor.GRAY),
                 Component.text("Regeneration after 20 seconds still", NamedTextColor.GRAY),
-                Component.text("Special: Shift + Double Jump for Worldbreaker", NamedTextColor.GRAY)
+                Component.text("Special: Worldbreaker", NamedTextColor.GRAY),
+                Component.text("Level 4: Obsidian Cage", NamedTextColor.GRAY),
+                Component.text("Level 5: Consume", NamedTextColor.GRAY)
         );
     }
 }

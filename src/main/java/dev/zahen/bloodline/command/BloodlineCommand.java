@@ -21,6 +21,9 @@ public final class BloodlineCommand implements TabExecutor {
             sender.sendMessage("Players only.");
             return true;
         }
+        if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
+            return true;
+        }
 
         plugin.getBloodlineGui().open(player);
         return true;

@@ -1,5 +1,5 @@
 plugins {
-    id("fabric-loom") version "1.11-SNAPSHOT"
+    id("fabric-loom") version "1.13.3"
     `maven-publish`
 }
 
@@ -21,13 +21,16 @@ dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
     mappings("net.fabricmc:yarn:${property("yarn_mappings")}:v2")
     modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
+    modImplementation("net.fabricmc.fabric-api:fabric-key-binding-api-v1:1.1.7+4fc5413f3e")
+    modImplementation("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.6.15+4ebb5c083e")
+    modImplementation("net.fabricmc.fabric-api:fabric-networking-api-v1:5.1.5+ae1e07683e")
+    modImplementation("net.fabricmc.fabric-api:fabric-rendering-v1:16.2.9+7edacff13e")
 }
 
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
-    withSourcesJar()
 }
 
 tasks.withType<JavaCompile>().configureEach {

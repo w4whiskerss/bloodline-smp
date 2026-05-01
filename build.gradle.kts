@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "dev.zahen"
-version = "2.3.0"
+version = "2.3.1"
 
 val paperVersion = "1.21.11"
 val paperBuild = "69"
@@ -38,6 +38,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.processResources {
     filteringCharset = "UTF-8"
+}
+
+tasks.named<Jar>("jar") {
+    archiveBaseName.set("BloodLine Server")
 }
 
 val downloadServer by tasks.registering {

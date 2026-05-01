@@ -21,12 +21,15 @@ public final class BloodlineTestCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!plugin.getConfig().getBoolean("testing.enable-test-commands", true)) {
+        if (!plugin.getGameplaySettings().testCommandsEnabled()) {
             sender.sendMessage("Test commands are disabled in config.");
             return true;
         }
         if (args.length == 0) {
             if (sender instanceof Player player) {
+                if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
+                    return true;
+                }
                 plugin.getTestItemsGui().open(player);
                 return true;
             }
@@ -37,6 +40,7 @@ public final class BloodlineTestCommand implements TabExecutor {
             sender.sendMessage("/bloodlinetest reroll <player> [animate]");
             sender.sendMessage("/bloodlinetest rerollall [animate]");
             sender.sendMessage("/bloodlinetest grace <start|stop|set> [duration]");
+            sender.sendMessage("/bloodlinetest debug <zero|restore|clear|sync> <player> [true|false]");
             sender.sendMessage("/bloodlinetest items");
             return true;
         }
@@ -45,6 +49,9 @@ public final class BloodlineTestCommand implements TabExecutor {
             case "items" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("Only players can open the test items panel.");
+                    return true;
+                }
+                if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
                     return true;
                 }
                 plugin.getTestItemsGui().open(player);
@@ -147,6 +154,38 @@ public final class BloodlineTestCommand implements TabExecutor {
                 }
                 return true;
             }
+            case "debug" -> {
+                if (args.length < 3) {
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[2]);
+                if (target == null) {
+                    return true;
+                }
+                switch (args[1].toLowerCase()) {
+                    case "zero" -> {
+                        boolean enabled = args.length < 4 || Boolean.parseBoolean(args[3]);
+                        plugin.getBloodlineManager().setZeroCooldownMode(target, enabled);
+                        sender.sendMessage((enabled ? "Enabled" : "Disabled") + " zero cooldown mode for " + target.getName() + ".");
+                    }
+                    case "restore" -> {
+                        plugin.getBloodlineManager().setZeroCooldownMode(target, false);
+                        sender.sendMessage("Restored normal cooldowns for " + target.getName() + ".");
+                    }
+                    case "clear" -> {
+                        plugin.getBloodlineManager().clearCooldowns(target);
+                        sender.sendMessage("Cleared cooldowns for " + target.getName() + ".");
+                    }
+                    case "sync" -> {
+                        plugin.getBloodlineManager().pushClientState(target, true);
+                        sender.sendMessage("Forced HUD sync for " + target.getName() + ".");
+                    }
+                    default -> {
+                        return true;
+                    }
+                }
+                return true;
+            }
             default -> {
                 return true;
             }
@@ -156,13 +195,19 @@ public final class BloodlineTestCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("items", "set", "give", "active", "maxall", "reroll", "rerollall", "grace");
+            return List.of("items", "set", "give", "active", "maxall", "reroll", "rerollall", "grace", "debug");
         }
         if (args.length == 2 && List.of("set", "give", "active", "maxall", "reroll").contains(args[0].toLowerCase())) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
+            return List.of("zero", "restore", "clear", "sync");
+        }
         if (args.length == 2 && args[0].equalsIgnoreCase("grace")) {
             return List.of("start", "stop", "set");
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("debug")) {
+            return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
         }
         if (args.length == 3 && List.of("set", "give", "active").contains(args[0].toLowerCase())) {
             return Arrays.stream(BloodlineType.values()).map(BloodlineType::key).toList();
@@ -178,6 +223,9 @@ public final class BloodlineTestCommand implements TabExecutor {
         }
         if (args.length == 4 && List.of("set", "give").contains(args[0].toLowerCase())) {
             return List.of("1", "2", "3", "4", "5");
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("zero")) {
+            return List.of("true", "false");
         }
         return List.of();
     }

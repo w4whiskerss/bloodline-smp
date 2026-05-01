@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -25,6 +26,7 @@ public final class AdminPanelGui {
 
     public static final String LIST_TITLE = "Bloodline Admin";
     public static final String EDIT_TITLE = "Edit Bloodline";
+    public static final String DEBUG_TITLE = "Debug Bloodline";
     private static final int PAGE_SIZE = 45;
 
     private final BloodlinePlugin plugin;
@@ -78,6 +80,10 @@ public final class AdminPanelGui {
             return handleListClick(player, slot);
         }
         if (inventory.getSize() == 27) {
+            String title = PlainTextComponentSerializer.plainText().serialize(player.getOpenInventory().title());
+            if (isDebugTitle(title)) {
+                return handleDebugClick(player, slot);
+            }
             return handleEditorClick(player, slot);
         }
         return false;
@@ -89,6 +95,10 @@ public final class AdminPanelGui {
 
     public boolean isEditTitle(String title) {
         return title.startsWith(EDIT_TITLE);
+    }
+
+    public boolean isDebugTitle(String title) {
+        return title.startsWith(DEBUG_TITLE);
     }
 
     private boolean handleListClick(Player player, int slot) {
@@ -136,6 +146,10 @@ public final class AdminPanelGui {
             case 22 -> session.setLevel(1);
             case 23 -> session.setLevel(Math.min(PlayerProfile.MAX_LEVEL, session.level() + 1));
             case 24 -> session.setLevel(PlayerProfile.MAX_LEVEL);
+            case 16 -> {
+                openDebug(player, session);
+                return true;
+            }
             case 25 -> {
                 plugin.getBloodlineManager().adminSetBloodline(session.targetUuid(), session.bloodline(), session.level());
                 sessions.remove(player.getUniqueId());
@@ -156,6 +170,50 @@ public final class AdminPanelGui {
         return true;
     }
 
+    private boolean handleDebugClick(Player player, int slot) {
+        EditSession session = sessions.get(player.getUniqueId());
+        if (session == null) {
+            openList(player);
+            return true;
+        }
+        Player target = Bukkit.getPlayer(session.targetUuid());
+        switch (slot) {
+            case 10 -> {
+                if (target != null) {
+                    plugin.getBloodlineManager().setZeroCooldownMode(target, true);
+                }
+            }
+            case 11 -> {
+                if (target != null) {
+                    plugin.getBloodlineManager().setZeroCooldownMode(target, false);
+                }
+            }
+            case 12 -> {
+                if (target != null) {
+                    plugin.getBloodlineManager().clearCooldowns(target);
+                }
+            }
+            case 13 -> {
+                if (target != null) {
+                    plugin.getBloodlineManager().pushClientState(target, true);
+                }
+            }
+            case 14 -> {
+                if (target != null) {
+                    plugin.getBloodlineManager().rerollInitialBloodline(target, false);
+                }
+            }
+            case 26 -> {
+                openEditor(player, session);
+                return true;
+            }
+            default -> {
+            }
+        }
+        openDebug(player, session);
+        return true;
+    }
+
     private void openEditor(Player player, EditSession session) {
         Inventory inventory = Bukkit.createInventory(player, 27, Component.text(EDIT_TITLE + " - " + session.targetName(), NamedTextColor.DARK_RED));
         inventory.setItem(4, createSummary(session));
@@ -169,8 +227,21 @@ public final class AdminPanelGui {
         inventory.setItem(22, createLevelDisplay(session.level()));
         inventory.setItem(23, createControl(Material.LIME_STAINED_GLASS_PANE, NamedTextColor.GREEN, "Level +1", "Increase level"));
         inventory.setItem(24, createControl(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, NamedTextColor.GOLD, "Set Max", "Set level to 5"));
+        inventory.setItem(16, createControl(Material.REDSTONE, NamedTextColor.LIGHT_PURPLE, "Debug", "Open debug actions"));
         inventory.setItem(25, createControl(Material.EMERALD_BLOCK, NamedTextColor.GREEN, "Save", "Apply these edits"));
         inventory.setItem(26, createControl(Material.BARRIER, NamedTextColor.RED, "Cancel", "Discard these edits"));
+        player.openInventory(inventory);
+    }
+
+    private void openDebug(Player player, EditSession session) {
+        Inventory inventory = Bukkit.createInventory(player, 27, Component.text(DEBUG_TITLE + " - " + session.targetName(), NamedTextColor.DARK_RED));
+        inventory.setItem(4, createSummary(session));
+        inventory.setItem(10, createControl(Material.CLOCK, NamedTextColor.LIGHT_PURPLE, "Zero Cooldown", "Enable zero cooldown mode"));
+        inventory.setItem(11, createControl(Material.BARRIER, NamedTextColor.YELLOW, "Restore Cooldowns", "Disable zero cooldown mode"));
+        inventory.setItem(12, createControl(Material.MILK_BUCKET, NamedTextColor.AQUA, "Clear Cooldowns", "Clear all active cooldowns"));
+        inventory.setItem(13, createControl(Material.ENDER_EYE, NamedTextColor.GREEN, "Force Sync", "Resend HUD state to the client"));
+        inventory.setItem(14, createControl(Material.AMETHYST_CLUSTER, NamedTextColor.GOLD, "Reroll", "Reroll this player's bloodline"));
+        inventory.setItem(26, createControl(Material.ARROW, NamedTextColor.RED, "Back", "Return to the editor"));
         player.openInventory(inventory);
     }
 

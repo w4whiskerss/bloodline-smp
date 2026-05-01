@@ -50,12 +50,12 @@ public abstract class AbstractBloodline implements Bloodline {
     }
 
     protected void activated(Player player, String message) {
-        player.sendActionBar(Component.text(message, NamedTextColor.GREEN));
+        manager().showPopup(player, message, NamedTextColor.GREEN);
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1F, 1.2F);
     }
 
     protected void cooldown(Player player, String key) {
-        player.sendActionBar(Component.text("Ability on cooldown: " + manager().formatCooldown(profile(player), key), NamedTextColor.RED));
+        manager().showPopup(player, "Ability on cooldown: " + manager().formatCooldown(profile(player), key), NamedTextColor.RED);
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 1F, 0.7F);
     }
 

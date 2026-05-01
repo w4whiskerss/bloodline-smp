@@ -1,11 +1,19 @@
-# Bloodline Hotkeys
+# BloodLine Client
 
-Small Fabric client mod for BloodlineSMP.
+Fabric client mod for BloodLine SMP.
+
+Features:
+- hidden hotkey networking through plugin messages
+- custom bloodline HUD above the hotbar
+- custom popup box for ability feedback
+- cooldown and timer rendering
+- OmniBlade HUD override when held
+- rebindable hotkeys through the Controls menu
 
 Default hotkeys:
-- `Shift + V` -> `/ability1`
-- `Shift + B` -> `/ability2`
-- `Shift + N` -> `/ability3`
+- `V` -> Primary
+- `B` -> Secondary
+- `N` -> Special
 
 Requirements:
 - Minecraft `1.21.11`
@@ -20,10 +28,10 @@ cd client-mod
 ```
 
 Output:
-- `client-mod/build/libs/bloodline-hotkeys-1.0.1.jar`
+- `client-mod/build/libs/BloodLine-Client-2.3.1.jar`
 
 Install:
 1. Install Fabric for Minecraft `1.21.11`.
 2. Put the built mod jar in your client `mods` folder.
 3. Put the matching Fabric API jar in the same `mods` folder.
-4. Join the server with `bloodline-smp-2.0.11.jar` installed.
+4. Join the server with `BloodLine Server 2.3.1` installed.

@@ -25,6 +25,9 @@ public final class BloodlineAdminCommand implements TabExecutor {
             player.sendMessage("You are not allowed to use this admin panel.");
             return true;
         }
+        if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
+            return true;
+        }
 
         plugin.getAdminPanelGui().openList(player);
         return true;

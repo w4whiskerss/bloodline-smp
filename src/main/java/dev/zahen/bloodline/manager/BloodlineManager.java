@@ -7,13 +7,16 @@ import dev.zahen.bloodline.ability.impl.EarthianBloodline;
 import dev.zahen.bloodline.ability.impl.SpartanBloodline;
 import dev.zahen.bloodline.ability.impl.UniversalBloodline;
 import dev.zahen.bloodline.ability.impl.VoiderBloodline;
+import dev.zahen.bloodline.config.GameplayMode;
 import dev.zahen.bloodline.model.BloodlineType;
 import dev.zahen.bloodline.model.PlayerProfile;
+import dev.zahen.bloodline.network.ClientChannelBridge;
 import dev.zahen.bloodline.util.TimeUtil;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -74,6 +77,8 @@ public final class BloodlineManager {
     private final Map<UUID, Long> stillSince = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyProfiles = ConcurrentHashMap.newKeySet();
     private final Set<UUID> clientHotkeyPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> zeroCooldownPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> pendingClientHandshake = new ConcurrentHashMap<>();
     private final List<PotionEffectType> voidEffects = List.of(
             PotionEffectType.SPEED,
             PotionEffectType.STRENGTH,
@@ -143,6 +148,7 @@ public final class BloodlineManager {
 
     public void handleJoin(Player player) {
         clientHotkeyPlayers.remove(player.getUniqueId());
+        zeroCooldownPlayers.remove(player.getUniqueId());
         PlayerProfile profile = profile(player);
         if (profile.activeBloodline() == BloodlineType.VOIDER && !canUseVoider(player)) {
             profile.setSingleBloodline(rollEligibleInitialBloodline(player), 1);
@@ -153,11 +159,19 @@ public final class BloodlineManager {
         }
         stillSince.put(player.getUniqueId(), System.currentTimeMillis());
         lastBlocks.put(player.getUniqueId(), player.getLocation().getBlock().getLocation());
+        beginClientHandshake(player);
+        if (isBloodlineGameplayDisabled(player)) {
+            removeAllPassives(player);
+            endVoidFlight(player, true);
+            showPopup(player, "Bloodline gameplay is disabled in this world.", NamedTextColor.RED);
+            pushClientState(player, true);
+            return;
+        }
         getBloodline(profile.activeBloodline()).applyPassive(player);
         updateFlightAvailability(player);
         if (profile.omniBladeSpectatorLocked()) {
             player.setGameMode(GameMode.SPECTATOR);
-            player.sendActionBar(Component.text("The OmniBlade has bound you to spectator mode.", NamedTextColor.LIGHT_PURPLE));
+            showPopup(player, "The OmniBlade has bound you to spectator mode.", NamedTextColor.LIGHT_PURPLE);
         }
         markDirty(player);
         if (profile.freshAssignmentPending()) {
@@ -165,8 +179,9 @@ public final class BloodlineManager {
             profile.setFreshAssignmentPending(false);
             markDirty(player);
         } else {
-            player.sendActionBar(Component.text("Bloodline loaded: " + profile.activeBloodline().displayName(), profile.activeBloodline().color()));
+            showPopup(player, "Bloodline loaded: " + profile.activeBloodline().displayName(), profile.activeBloodline().color());
         }
+        pushClientState(player, true);
     }
 
     public void handleQuit(Player player) {
@@ -196,6 +211,8 @@ public final class BloodlineManager {
         universalRiftDashUntil.remove(player.getUniqueId());
         universalAscensionUntil.remove(player.getUniqueId());
         clientHotkeyPlayers.remove(player.getUniqueId());
+        zeroCooldownPlayers.remove(player.getUniqueId());
+        pendingClientHandshake.remove(player.getUniqueId());
         inputDebounce.remove(player.getUniqueId());
         dirtyProfiles.remove(player.getUniqueId());
         BossBar bossBar = voidFlightBossBars.remove(player.getUniqueId());
@@ -206,6 +223,15 @@ public final class BloodlineManager {
 
     public void handleMove(Player player, Location from, Location to) {
         if (to == null) {
+            return;
+        }
+
+        boolean wasDisabled = from != null && plugin.isBloodlineGameplayDisabled(from.getWorld());
+        boolean isDisabled = plugin.isBloodlineGameplayDisabled(to.getWorld());
+        if (wasDisabled != isDisabled) {
+            enforceWorldState(player, isDisabled);
+        }
+        if (isDisabled) {
             return;
         }
 
@@ -231,10 +257,16 @@ public final class BloodlineManager {
     }
 
     public void handleSneakToggle(Player player) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         updateFlightAvailability(player);
     }
 
     public void triggerPrimary(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         if (!allowInput(player, "primary")) {
             return;
         }
@@ -243,6 +275,9 @@ public final class BloodlineManager {
     }
 
     public void triggerSecondary(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         if (!allowInput(player, "secondary")) {
             return;
         }
@@ -251,6 +286,9 @@ public final class BloodlineManager {
     }
 
     public void triggerSpecial(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         if (!allowInput(player, "special")) {
             return;
         }
@@ -261,8 +299,46 @@ public final class BloodlineManager {
         }
     }
 
+    public void triggerFourth(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
+        if (!allowInput(player, "fourth")) {
+            return;
+        }
+        Bloodline bloodline = getBloodline(profile(player).activeBloodline());
+        if (bloodline.supportsFourthAbility()) {
+            bloodline.handleFourthAbility(player);
+            markDirty(player);
+        } else {
+            showPopup(player, "Fourth ability locked.", NamedTextColor.RED);
+        }
+    }
+
+    public void triggerFifth(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
+        if (!allowInput(player, "fifth")) {
+            return;
+        }
+        Bloodline bloodline = getBloodline(profile(player).activeBloodline());
+        if (bloodline.supportsFifthAbility()) {
+            bloodline.handleFifthAbility(player);
+            markDirty(player);
+        } else {
+            showPopup(player, "Fifth ability locked.", NamedTextColor.RED);
+        }
+    }
+
     public void markClientHotkeys(Player player) {
-        clientHotkeyPlayers.add(player.getUniqueId());
+        boolean firstHandshake = clientHotkeyPlayers.add(player.getUniqueId());
+        pendingClientHandshake.remove(player.getUniqueId());
+        sendPayload(player, buildPacket("HELLO_ACK"));
+        if (firstHandshake) {
+            debugClientMod(player, "Client mod handshake confirmed.");
+        }
+        pushClientState(player, true);
     }
 
     public boolean usesClientHotkeys(Player player) {
@@ -270,11 +346,14 @@ public final class BloodlineManager {
     }
 
     public boolean withdrawBloodlineToBottle(Player player, ItemStack glassBottle) {
+        if (denyIfGameplayDisabled(player)) {
+            return false;
+        }
         PlayerProfile profile = profile(player);
         BloodlineType type = profile.activeBloodline();
         int level = Math.max(1, profile.activeLevel());
         if (type == BloodlineType.UNIVERSAL) {
-            player.sendActionBar(Component.text("Omni cannot be bottled.", NamedTextColor.RED));
+            showPopup(player, "Omni cannot be bottled.", NamedTextColor.RED);
             return false;
         }
         if (glassBottle == null || glassBottle.getAmount() <= 0) {
@@ -287,13 +366,20 @@ public final class BloodlineManager {
         clearBloodlineState(profile);
         getBloodline(type).applyPassive(player);
         markDirty(player);
-        player.sendActionBar(Component.text("Bloodline withdrawn into a bottle.", NamedTextColor.GOLD));
+        showPopup(player, "Bloodline withdrawn into a bottle.", NamedTextColor.GOLD);
+        pushClientState(player, true);
         return true;
     }
 
     public boolean startCooldown(Player player, String key, long baseSeconds, long reductionPerLevel, long minSeconds) {
         PlayerProfile profile = profile(player);
         long now = System.currentTimeMillis();
+        if (zeroCooldownPlayers.contains(player.getUniqueId())) {
+            profile.clearCooldown(key);
+            markDirty(player);
+            pushClientState(player, false);
+            return true;
+        }
         if (profile.getCooldown(key) > now) {
             return false;
         }
@@ -302,6 +388,7 @@ public final class BloodlineManager {
         long cooldownSeconds = Math.max(minSeconds, baseSeconds - ((level - 1L) * reductionPerLevel));
         profile.setCooldown(key, now + cooldownSeconds * 1000L);
         markDirty(player);
+        pushClientState(player, false);
         return true;
     }
 
@@ -366,6 +453,9 @@ public final class BloodlineManager {
     }
 
     public boolean tryLaunchHeldSpartanFireball(Player player) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return false;
+        }
         HeldFireballState state = heldFireballs.get(player.getUniqueId());
         if (state == null || state.expiresAt() <= System.currentTimeMillis()) {
             heldFireballs.remove(player.getUniqueId());
@@ -598,6 +688,49 @@ public final class BloodlineManager {
         player.setFireTicks((int) (durationSeconds * 20L));
     }
 
+    public void startSpartanFlameBarrier(Player player) {
+        int level = profile(player).activeLevel();
+        long durationSeconds = 8L + Math.max(0, level - 4) * 2L;
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) (durationSeconds * 20L), 1, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (durationSeconds * 20L), 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (durationSeconds * 20L), 1, true, true, true));
+        for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(3.5D, entity -> entity != player)) {
+            nearby.setFireTicks(Math.max(nearby.getFireTicks(), 80));
+            nearby.damage(4.0D + Math.max(0, level - 4), player);
+            Vector push = nearby.getLocation().toVector().subtract(player.getLocation().toVector()).normalize().multiply(1.1D);
+            push.setY(0.22D);
+            nearby.setVelocity(push);
+        }
+        player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1, 0), 110, 1.4, 1.1, 1.4, 0.05);
+        player.getWorld().playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, SoundCategory.PLAYERS, 1F, 0.8F);
+    }
+
+    public void startSpartanFinalAbility(Player player) {
+        int level = profile(player).activeLevel();
+        if (plugin.getGameplaySettings().isPublicMode()) {
+            Vector direction = player.getEyeLocation().getDirection().normalize().multiply(2.4D + (level - 5) * 0.1D);
+            direction.setY(Math.max(0.18D, direction.getY() * 0.2D));
+            player.setVelocity(direction);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 2, true, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 100, 1, true, true, true));
+            for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(4.0D, entity -> entity != player)) {
+                nearby.damage(6.0D, player);
+                nearby.setFireTicks(Math.max(nearby.getFireTicks(), 120));
+            }
+            player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1, 0), 140, 1.0, 0.8, 1.0, 0.06);
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.PLAYERS, 1F, 0.65F);
+        } else {
+            startSpartanHellDominion(player);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 160, 1, true, true, true));
+            for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(6.0D, entity -> entity != player)) {
+                nearby.setFireTicks(Math.max(nearby.getFireTicks(), 160));
+                nearby.damage(8.0D, player);
+            }
+            player.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, player.getLocation().add(0, 1, 0), 150, 1.2, 1.0, 1.2, 0.05);
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.PLAYERS, 0.8F, 1.25F);
+        }
+    }
+
     private void sendHellDominionTargetsToNether(Player player, Location center) {
         double radius = plugin.getConfig().getDouble("bloodlines.spartan.hell-dominion.nether-send-radius", 5.0D);
         int maxTargets = Math.max(0, plugin.getConfig().getInt("bloodlines.spartan.hell-dominion.nether-send-max-targets", 2));
@@ -690,6 +823,66 @@ public final class BloodlineManager {
         player.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, player.getLocation(), 6);
     }
 
+    public boolean startObsidianCage(Player player) {
+        RayTraceResult trace = player.getWorld().rayTraceEntities(
+                player.getEyeLocation(),
+                player.getEyeLocation().getDirection(),
+                18.0D,
+                entity -> entity instanceof LivingEntity && entity != player
+        );
+        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
+            return false;
+        }
+        Location center = target.getLocation().getBlock().getLocation();
+        List<TemporaryTerrainBlock> changed = new ArrayList<>();
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                for (int y = 0; y <= 3; y++) {
+                    boolean wall = Math.abs(x) == 1 || Math.abs(z) == 1 || y == 3;
+                    if (!wall) {
+                        continue;
+                    }
+                    Block block = center.clone().add(x, y, z).getBlock();
+                    if (block.getType() == Material.BEDROCK) {
+                        continue;
+                    }
+                    changed.add(new TemporaryTerrainBlock(block.getLocation(), block.getBlockData().clone()));
+                    block.setType(Material.OBSIDIAN, false);
+                }
+            }
+        }
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 120, 4, true, true, true));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 120, 1, true, true, true));
+        target.getWorld().spawnParticle(Particle.PORTAL, target.getLocation().add(0, 1, 0), 40, 0.7, 1.2, 0.7, 0.03);
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> restoreTemporaryTerrain(new EarthianWorldbreakerState(0L, center, 0D, changed)), 120L);
+        return true;
+    }
+
+    public boolean startConsume(Player player) {
+        RayTraceResult trace = player.getWorld().rayTraceEntities(
+                player.getEyeLocation(),
+                player.getEyeLocation().getDirection(),
+                14.0D,
+                entity -> entity instanceof LivingEntity && entity != player
+        );
+        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
+            return false;
+        }
+        Location targetLoc = target.getLocation().clone();
+        for (int depth = 1; depth <= 2; depth++) {
+            Location bury = targetLoc.clone().subtract(0, depth, 0);
+            if (bury.getBlock().isSolid()) {
+                target.teleport(bury.add(0.5D, 0.1D, 0.5D));
+                break;
+            }
+        }
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 6, true, true, true));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 2, true, true, true));
+        target.damage(8.0D, player);
+        target.getWorld().spawnParticle(Particle.BLOCK, target.getLocation().add(0, 0.1, 0), 90, 0.7, 0.4, 0.7, target.getLocation().getBlock().getBlockData());
+        return true;
+    }
+
     public void endVoidFlight(Player player, boolean interrupted) {
         UUID uuid = player.getUniqueId();
         if (!voidFlightEndsAt.containsKey(uuid)) {
@@ -710,6 +903,35 @@ public final class BloodlineManager {
         updateFlightAvailability(player);
         if (!interrupted) {
             player.sendActionBar(Component.text("Void Flight ended", NamedTextColor.GRAY));
+        }
+    }
+
+    public void startEndermanGuard(Player player) {
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 200, 0, true, true, true));
+        player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation().add(0, 1, 0), 100, 0.9, 1.0, 0.9, 0.05);
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, SoundCategory.PLAYERS, 1F, 0.8F);
+    }
+
+    public void startVoiderFinalAbility(Player player) {
+        if (plugin.getGameplaySettings().isPublicMode()) {
+            for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(5.5D, entity -> entity != player)) {
+                nearby.damage(7.0D, player);
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 40, 0, true, true, true));
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 80, 0, true, true, true));
+            }
+            player.getWorld().spawnParticle(Particle.DRAGON_BREATH, player.getLocation().add(0, 1, 0), 140, 1.3, 0.8, 1.3, 0.05);
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.PLAYERS, 0.6F, 1.3F);
+        } else {
+            startVoidFlight(player, false);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 140, 0, true, true, true));
+            for (LivingEntity nearby : player.getLocation().getNearbyLivingEntities(6.5D, entity -> entity != player)) {
+                nearby.damage(8.5D, player);
+                nearby.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 120, 0, true, true, true));
+            }
+            player.getWorld().spawnParticle(Particle.REVERSE_PORTAL, player.getLocation().add(0, 1, 0), 160, 1.4, 1.0, 1.4, 0.06);
+            player.getWorld().playSound(player.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, SoundCategory.PLAYERS, 0.8F, 1.25F);
         }
     }
 
@@ -846,6 +1068,9 @@ public final class BloodlineManager {
     }
 
     public void switchActiveBloodline(Player player, BloodlineType type) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         PlayerProfile profile = profile(player);
         if (type != profile.activeBloodline()) {
             player.sendActionBar(Component.text("You can only change bloodlines with trait potions.", NamedTextColor.RED));
@@ -853,6 +1078,9 @@ public final class BloodlineManager {
     }
 
     public boolean applyTraitPotion(Player player, BloodlineType type, int level) {
+        if (denyIfGameplayDisabled(player)) {
+            return false;
+        }
         if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
             player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
             return false;
@@ -869,6 +1097,9 @@ public final class BloodlineManager {
     }
 
     public void applyUpgradePotion(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         PlayerProfile profile = profile(player);
         BloodlineType active = profile.activeBloodline();
         int current = profile.level(active);
@@ -882,6 +1113,9 @@ public final class BloodlineManager {
     }
 
     public void grantBloodline(Player player, BloodlineType type, int level) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
             player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
             return;
@@ -896,6 +1130,9 @@ public final class BloodlineManager {
     }
 
     public void forceActiveBloodline(Player player, BloodlineType type, int level) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         if (type == BloodlineType.VOIDER && !canUseVoider(player)) {
             player.sendActionBar(Component.text("Voider is locked to " + allowedVoiderOwnerName() + ".", NamedTextColor.RED));
             return;
@@ -927,12 +1164,18 @@ public final class BloodlineManager {
     }
 
     public void maxAllBaseBloodlines(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         PlayerProfile profile = profile(player);
         profile.setSingleBloodline(profile.activeBloodline(), PlayerProfile.MAX_LEVEL);
         markDirty(player);
     }
 
     public BloodlineType rerollInitialBloodline(Player player, boolean animated) {
+        if (denyIfGameplayDisabled(player)) {
+            return profile(player).activeBloodline();
+        }
         PlayerProfile profile = profile(player);
         BloodlineType rolled = rollEligibleInitialBloodline(player);
         removeAllPassives(player);
@@ -950,6 +1193,9 @@ public final class BloodlineManager {
     }
 
     public void unlockUniversal(Player player) {
+        if (denyIfGameplayDisabled(player)) {
+            return;
+        }
         PlayerProfile profile = profile(player);
         profile.setLevel(BloodlineType.UNIVERSAL, 1);
         profile.setActiveBloodline(BloodlineType.UNIVERSAL);
@@ -960,6 +1206,9 @@ public final class BloodlineManager {
     }
 
     public void handleDamageTaken(Player player, double originalDamage, org.bukkit.event.entity.EntityDamageEvent event) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         BloodlineType active = profile(player).activeBloodline();
         EarthianWorldbreakerState worldbreaker = earthianWorldbreakers.get(player.getUniqueId());
         if (worldbreaker != null
@@ -980,6 +1229,9 @@ public final class BloodlineManager {
     }
 
     public void handleVelocity(Player player) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return;
+        }
         BloodlineType active = profile(player).activeBloodline();
         if (earthianWorldbreakers.containsKey(player.getUniqueId())) {
             player.setVelocity(new Vector(0.0D, Math.max(player.getVelocity().getY(), 0.0D), 0.0D));
@@ -994,6 +1246,9 @@ public final class BloodlineManager {
     }
 
     public void handleMeleeHit(Player attacker, Entity target) {
+        if (isBloodlineGameplayDisabled(attacker)) {
+            return;
+        }
         PlayerProfile attackerProfile = profile(attacker);
         if (!(target instanceof LivingEntity victim)) {
             return;
@@ -1154,6 +1409,13 @@ public final class BloodlineManager {
     private void tickPlayers() {
         long now = System.currentTimeMillis();
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (shouldKickForMissingClientMod(player, now)) {
+                continue;
+            }
+            if (isBloodlineGameplayDisabled(player)) {
+                pushClientState(player, false);
+                continue;
+            }
             PlayerProfile profile = profile(player);
             BloodlineType active = profile.activeBloodline();
             getBloodline(active).applyPassive(player);
@@ -1316,6 +1578,7 @@ public final class BloodlineManager {
             rechargeVoidSend(profile);
             updateFlightAvailability(player);
             sendCooldownBar(player);
+            pushClientState(player, false);
         }
     }
 
@@ -1353,11 +1616,19 @@ public final class BloodlineManager {
     }
 
     private void sendCooldownBar(Player player) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return;
+        }
+        if (usesClientHotkeys(player)) {
+            return;
+        }
         PlayerProfile profile = profile(player);
         String primary = labelForKey(profile, primaryKey(profile.activeBloodline()));
         String secondary = labelForKey(profile, secondaryKey(profile.activeBloodline()));
         String special = labelForKey(profile, specialKey(profile.activeBloodline()));
-        player.sendActionBar(Component.text("P: " + primary + " | S: " + secondary + " | X: " + special, NamedTextColor.YELLOW));
+        String fourth = labelForKey(profile, fourthKey(profile.activeBloodline()));
+        String fifth = labelForKey(profile, fifthKey(profile.activeBloodline()));
+        player.sendActionBar(Component.text("1:" + primary + " 2:" + secondary + " 3:" + special + " 4:" + fourth + " 5:" + fifth, NamedTextColor.YELLOW));
     }
 
     private String labelForKey(PlayerProfile profile, String key) {
@@ -1410,8 +1681,30 @@ public final class BloodlineManager {
         };
     }
 
+    private String fourthKey(BloodlineType type) {
+        return switch (type) {
+            case SPARTAN -> "spartan.flame_barrier";
+            case EARTHIAN -> "earthian.obsidian_cage";
+            case VOIDER -> "voider.enderman_guard";
+            default -> null;
+        };
+    }
+
+    private String fifthKey(BloodlineType type) {
+        return switch (type) {
+            case SPARTAN -> "spartan.inferno_rush";
+            case EARTHIAN -> "earthian.consume";
+            case VOIDER -> "voider.void_collapse";
+            default -> null;
+        };
+    }
+
     private void updateFlightAvailability(Player player) {
         if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
+        if (isBloodlineGameplayDisabled(player)) {
+            player.setAllowFlight(false);
             return;
         }
         boolean ascended = universalAscensionUntil.getOrDefault(player.getUniqueId(), 0L) > System.currentTimeMillis();
@@ -1439,6 +1732,33 @@ public final class BloodlineManager {
         for (Bloodline bloodline : bloodlines.values()) {
             bloodline.removePassive(player);
         }
+    }
+
+    public boolean isBloodlineGameplayDisabled(Player player) {
+        return plugin.isBloodlineGameplayDisabled(player.getWorld());
+    }
+
+    public boolean denyIfGameplayDisabled(Player player) {
+        if (!isBloodlineGameplayDisabled(player)) {
+            return false;
+        }
+        showPopup(player, "Bloodline gameplay is disabled in this world.", NamedTextColor.RED);
+        return true;
+    }
+
+    private void enforceWorldState(Player player, boolean disableGameplay) {
+        if (disableGameplay) {
+            removeAllPassives(player);
+            endVoidFlight(player, true);
+            player.setGliding(false);
+            showPopup(player, "Bloodline gameplay is disabled in this world.", NamedTextColor.RED);
+            pushClientState(player, true);
+            return;
+        }
+        getBloodline(profile(player).activeBloodline()).applyPassive(player);
+        updateFlightAvailability(player);
+        showPopup(player, "Bloodline gameplay re-enabled in this world.", NamedTextColor.GREEN);
+        pushClientState(player, true);
     }
 
     private boolean canUseVoider(Player player) {
@@ -1887,6 +2207,281 @@ public final class BloodlineManager {
         for (TemporaryTerrainBlock changed : state.terrain()) {
             changed.location().getBlock().setBlockData(changed.originalData(), false);
         }
+    }
+
+    public void setZeroCooldownMode(Player player, boolean enabled) {
+        if (enabled) {
+            zeroCooldownPlayers.add(player.getUniqueId());
+            showPopup(player, "Zero cooldown mode enabled.", NamedTextColor.LIGHT_PURPLE);
+        } else {
+            zeroCooldownPlayers.remove(player.getUniqueId());
+            showPopup(player, "Normal cooldowns restored.", NamedTextColor.YELLOW);
+        }
+        pushClientState(player, true);
+    }
+
+    public void clearCooldowns(Player player) {
+        profile(player).cooldowns().clear();
+        markDirty(player);
+        showPopup(player, "Cooldowns cleared.", NamedTextColor.GREEN);
+        pushClientState(player, true);
+    }
+
+    public void showPopup(Player player, String message, NamedTextColor color) {
+        if (player == null) {
+            return;
+        }
+        if (usesClientHotkeys(player)) {
+            sendPayload(player, buildPacket("POPUP", "message", message, "color", color.toString()));
+        } else {
+            player.sendActionBar(Component.text(message, color));
+        }
+    }
+
+    public void handleClientPayload(Player player, String payload) {
+        if (player == null || payload == null || payload.isBlank()) {
+            return;
+        }
+        String[] parts = payload.split("\u001F");
+        debugClientMod(player, "Received payload: " + parts[0]);
+        switch (parts[0]) {
+            case "HELLO" -> markClientHotkeys(player);
+            case "ABILITY" -> {
+                if (parts.length < 2) {
+                    return;
+                }
+                switch (parts[1]) {
+                    case "PRIMARY" -> triggerPrimary(player);
+                    case "SECONDARY" -> triggerSecondary(player);
+                    case "SPECIAL" -> triggerSpecial(player);
+                    case "FOURTH" -> triggerFourth(player);
+                    case "FIFTH" -> triggerFifth(player);
+                    default -> {
+                    }
+                }
+            }
+            default -> {
+                debugClientMod(player, "Ignoring unknown payload: " + parts[0]);
+            }
+        }
+    }
+
+    public void pushClientState(Player player, boolean force) {
+        if (player == null || !usesClientHotkeys(player)) {
+            return;
+        }
+        PlayerProfile profile = profile(player);
+        BloodlineType active = profile.activeBloodline();
+        long primaryRemaining = remainingCooldown(profile, primaryKey(active));
+        long secondaryRemaining = active == BloodlineType.VOIDER
+                ? Math.max(0L, profile.voidSendCharges() > 0 ? 0L : nextVoidRechargeMillis(profile))
+                : remainingCooldown(profile, secondaryKey(active));
+        long specialRemaining = remainingCooldown(profile, specialKey(active));
+        long fourthRemaining = remainingCooldown(profile, fourthKey(active));
+        long fifthRemaining = remainingCooldown(profile, fifthKey(active));
+
+        sendPayload(player, buildPacket(
+                "SYNC",
+                "bloodline", active.key(),
+                "bloodlineName", active.displayName(),
+                "level", Integer.toString(profile.activeLevel()),
+                "mode", plugin.getGameplaySettings().gameplayMode().name(),
+                "worldDisabled", Boolean.toString(isBloodlineGameplayDisabled(player)),
+                "zeroCooldown", Boolean.toString(zeroCooldownPlayers.contains(player.getUniqueId())),
+                "omniHeld", Boolean.toString(plugin.getCustomItems().isOmniBlade(player.getInventory().getItemInMainHand())),
+                "primaryName", primaryAbilityLabel(active),
+                "secondaryName", secondaryAbilityLabel(active),
+                "specialName", specialAbilityLabel(active),
+                "fourthName", fourthAbilityLabel(active),
+                "fifthName", fifthAbilityLabel(active),
+                "primaryRemaining", Long.toString(primaryRemaining),
+                "secondaryRemaining", Long.toString(secondaryRemaining),
+                "specialRemaining", Long.toString(specialRemaining),
+                "fourthRemaining", Long.toString(fourthRemaining),
+                "fifthRemaining", Long.toString(fifthRemaining),
+                "secondaryCharges", active == BloodlineType.VOIDER ? Integer.toString(profile.voidSendCharges()) : "0",
+                "timerLabel", currentTimerLabel(active),
+                "timerRemaining", Long.toString(currentTimerRemaining(player, active)),
+                "timerTotal", Long.toString(currentTimerTotal(player, active)),
+                "primaryUnlocked", Boolean.toString(profile.activeLevel() >= 1),
+                "secondaryUnlocked", Boolean.toString(profile.activeLevel() >= 2),
+                "specialUnlocked", Boolean.toString(profile.activeLevel() >= 3),
+                "fourthUnlocked", Boolean.toString(profile.activeLevel() >= 4),
+                "fifthUnlocked", Boolean.toString(profile.activeLevel() >= 5)
+        ));
+    }
+
+    private void beginClientHandshake(Player player) {
+        if (!plugin.getConfig().getBoolean("client-mod.enabled", true)) {
+            pendingClientHandshake.remove(player.getUniqueId());
+            return;
+        }
+        if (plugin.getConfig().getBoolean("client-mod.required", false)) {
+            long timeoutMillis = Math.max(5L, plugin.getConfig().getLong("client-mod.timeout-seconds", 15L)) * 1000L;
+            pendingClientHandshake.put(player.getUniqueId(), System.currentTimeMillis() + timeoutMillis);
+            debugClientMod(player, "Waiting for required client mod handshake for " + (timeoutMillis / 1000L) + "s.");
+        } else {
+            pendingClientHandshake.remove(player.getUniqueId());
+            debugClientMod(player, "Client mod optional; waiting for handshake without kick.");
+        }
+    }
+
+    private boolean shouldKickForMissingClientMod(Player player, long now) {
+        Long deadline = pendingClientHandshake.get(player.getUniqueId());
+        if (deadline == null || usesClientHotkeys(player) || now < deadline) {
+            return false;
+        }
+        pendingClientHandshake.remove(player.getUniqueId());
+        debugClientMod(player, "Handshake timed out; kicking player because client mod is required.");
+        player.kick(Component.text("BloodLine Client is required on this server.", NamedTextColor.RED));
+        return true;
+    }
+
+    private void sendPayload(Player player, String payload) {
+        byte[] content = payload.getBytes(StandardCharsets.UTF_8);
+        byte[] packet = new byte[varIntLength(content.length) + content.length];
+        int index = writeVarInt(packet, 0, content.length);
+        System.arraycopy(content, 0, packet, index, content.length);
+        player.sendPluginMessage(plugin, ClientChannelBridge.CHANNEL, packet);
+    }
+
+    private String buildPacket(String opcode, String... entries) {
+        StringBuilder builder = new StringBuilder(opcode);
+        for (int index = 0; index < entries.length - 1; index += 2) {
+            builder.append('\u001F')
+                    .append(entries[index])
+                    .append('=')
+                    .append(entries[index + 1].replace("\u001F", " "));
+        }
+        return builder.toString();
+    }
+
+    private void debugClientMod(Player player, String message) {
+        if (!plugin.getConfig().getBoolean("client-mod.debug", false)) {
+            return;
+        }
+        String name = player == null ? "unknown" : player.getName();
+        plugin.getLogger().info("[ClientMod] [" + name + "] " + message);
+    }
+
+    private int varIntLength(int value) {
+        int length = 1;
+        while ((value & ~0x7F) != 0) {
+            value >>>= 7;
+            length++;
+        }
+        return length;
+    }
+
+    private int writeVarInt(byte[] target, int index, int value) {
+        while ((value & ~0x7F) != 0) {
+            target[index++] = (byte) ((value & 0x7F) | 0x80);
+            value >>>= 7;
+        }
+        target[index++] = (byte) value;
+        return index;
+    }
+
+    private long nextVoidRechargeMillis(PlayerProfile profile) {
+        long rechargeMillis = plugin.getConfig().getLong("bloodlines.voider.void-send.recharge-hours", 12L) * 60L * 60L * 1000L;
+        return Math.max(0L, (profile.voidSendLastRechargeAt() + rechargeMillis) - System.currentTimeMillis());
+    }
+
+    private String primaryAbilityLabel(BloodlineType type) {
+        return switch (type) {
+            case AQUA -> "Water Dash";
+            case SPARTAN -> "Fireball";
+            case EARTHIAN -> "Ground Slam";
+            case VOIDER -> "Void Blink";
+            case UNIVERSAL -> "Rift Dash";
+        };
+    }
+
+    private String secondaryAbilityLabel(BloodlineType type) {
+        return switch (type) {
+            case AQUA -> "Suffocation Curse";
+            case SPARTAN -> "Flaming Hands";
+            case EARTHIAN -> "Root Trap";
+            case VOIDER -> "Void Send";
+            case UNIVERSAL -> "Blood Fusion";
+        };
+    }
+
+    private String specialAbilityLabel(BloodlineType type) {
+        return switch (type) {
+            case AQUA -> "Tidal Surge";
+            case SPARTAN -> "Hell Dominion";
+            case EARTHIAN -> "Worldbreaker";
+            case VOIDER -> "Void Flight";
+            case UNIVERSAL -> "Ascension";
+        };
+    }
+
+    private String fourthAbilityLabel(BloodlineType type) {
+        return switch (type) {
+            case AQUA -> "Locked";
+            case SPARTAN -> "Flame Barrier";
+            case EARTHIAN -> "Obsidian Cage";
+            case VOIDER -> "Enderman Guard";
+            case UNIVERSAL -> "Omni IV";
+        };
+    }
+
+    private String fifthAbilityLabel(BloodlineType type) {
+        GameplayMode mode = plugin.getGameplaySettings().gameplayMode();
+        return switch (type) {
+            case AQUA -> "Locked";
+            case SPARTAN -> mode == GameplayMode.PUBLIC ? "Inferno Rush" : "Crimson Domain";
+            case EARTHIAN -> "Consume";
+            case VOIDER -> mode == GameplayMode.PUBLIC ? "Void Collapse" : "Void Domain";
+            case UNIVERSAL -> "Omni V";
+        };
+    }
+
+    private String currentTimerLabel(BloodlineType active) {
+        return switch (active) {
+            case VOIDER -> "Void Flight";
+            case SPARTAN -> plugin.getGameplaySettings().isPublicMode() ? "Inferno Rush" : "Hell Dominion";
+            case AQUA -> "Tidal Surge";
+            case EARTHIAN -> "Worldbreaker";
+            case UNIVERSAL -> "Ascension";
+        };
+    }
+
+    private long currentTimerRemaining(Player player, BloodlineType active) {
+        UUID uuid = player.getUniqueId();
+        long now = System.currentTimeMillis();
+        return switch (active) {
+            case VOIDER -> Math.max(0L, voidFlightEndsAt.getOrDefault(uuid, 0L) - now);
+            case SPARTAN -> {
+                HellDominionState state = spartanHellDominions.get(uuid);
+                yield state == null ? 0L : Math.max(0L, state.endsAt() - now);
+            }
+            case AQUA -> {
+                TidalSurgeState state = tidalSurges.get(uuid);
+                yield state == null ? 0L : Math.max(0L, state.endsAt() - now);
+            }
+            case EARTHIAN -> {
+                EarthianWorldbreakerState state = earthianWorldbreakers.get(uuid);
+                yield state == null ? 0L : Math.max(0L, state.endsAt() - now);
+            }
+            case UNIVERSAL -> Math.max(0L, universalAscensionUntil.getOrDefault(uuid, 0L) - now);
+        };
+    }
+
+    private long currentTimerTotal(Player player, BloodlineType active) {
+        int level = Math.max(1, profile(player).activeLevel());
+        return switch (active) {
+            case VOIDER -> (plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds", 300L)
+                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.voider.void-flight.duration-seconds-per-level", 30L)) * 1000L;
+            case SPARTAN -> (plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds", 10L)
+                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.duration-seconds-per-level", 1L)) * 1000L;
+            case AQUA -> (plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.duration-seconds", 10L)
+                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.duration-seconds-per-level", 1L)) * 1000L;
+            case EARTHIAN -> (plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.duration-seconds", 8L)
+                    + Math.max(0, level - 1) * plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.duration-seconds-per-level", 1L)) * 1000L;
+            case UNIVERSAL -> (10L + Math.max(0, level - 1)) * 1000L;
+        };
     }
 
     private record GroundSlamState(long armedAt, boolean leftGround, boolean universal, double startY) {

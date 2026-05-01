@@ -17,6 +17,8 @@ public class VoiderBloodline extends AbstractBloodline {
 
     private static final String VOID_BLINK_KEY = "voider.void_blink";
     private static final String VOID_FLIGHT_KEY = "voider.void_flight";
+    private static final String ENDERMAN_GUARD_KEY = "voider.enderman_guard";
+    private static final String VOID_COLLAPSE_KEY = "voider.void_collapse";
 
     public VoiderBloodline(BloodlinePlugin plugin, BloodlineType type) {
         super(plugin, type);
@@ -96,6 +98,44 @@ public class VoiderBloodline extends AbstractBloodline {
     }
 
     @Override
+    public boolean supportsFourthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFourthAbility(Player player) {
+        if (level(player) < 4) {
+            manager().showPopup(player, "Enderman Guard unlocks at level 4.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, ENDERMAN_GUARD_KEY, 210L, 8L, 75L)) {
+            cooldown(player, ENDERMAN_GUARD_KEY);
+            return;
+        }
+        manager().startEndermanGuard(player);
+        activated(player, "Enderman Guard");
+    }
+
+    @Override
+    public boolean supportsFifthAbility() {
+        return true;
+    }
+
+    @Override
+    public void handleFifthAbility(Player player) {
+        if (level(player) < 5) {
+            manager().showPopup(player, "Fifth Voider ability unlocks at level 5.", NamedTextColor.RED);
+            return;
+        }
+        if (!startCooldown(player, VOID_COLLAPSE_KEY, 300L, 12L, 90L)) {
+            cooldown(player, VOID_COLLAPSE_KEY);
+            return;
+        }
+        manager().startVoiderFinalAbility(player);
+        activated(player, plugin.getGameplaySettings().isPublicMode() ? "Void Collapse" : "Void Domain");
+    }
+
+    @Override
     public List<Component> describePassives(Player player) {
         return List.of(
                 Component.text("Daily random level 1 potion effect", NamedTextColor.GRAY),
@@ -103,7 +143,9 @@ public class VoiderBloodline extends AbstractBloodline {
                 Component.text("Higher levels strengthen the daily buff and flight/send values", NamedTextColor.GRAY),
                 Component.text("Primary: Void Blink", NamedTextColor.GRAY),
                 Component.text("Secondary: Void Send (2 charges)", NamedTextColor.GRAY),
-                Component.text("Special: Void Flight", NamedTextColor.GRAY)
+                Component.text("Special: Void Flight", NamedTextColor.GRAY),
+                Component.text("Level 4: Enderman Guard", NamedTextColor.GRAY),
+                Component.text("Level 5: Void Collapse / Void Domain", NamedTextColor.GRAY)
         );
     }
 }
