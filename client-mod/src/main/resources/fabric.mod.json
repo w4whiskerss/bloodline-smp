@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "Bloodline Hotkeys",
   "description": "Client hotkeys for BloodlineSMP abilities.",
+  "icon": "icon.png",
   "authors": [
     "w4whiskers"
   ],
