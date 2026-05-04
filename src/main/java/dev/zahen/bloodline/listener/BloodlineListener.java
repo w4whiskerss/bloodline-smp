@@ -172,9 +172,14 @@ public final class BloodlineListener implements Listener {
         }
 
         if (attacker != null && attacker.isSneaking() && !manager.usesClientHotkeys(attacker)) {
-            event.setCancelled(true);
-            manager.triggerSecondary(attacker);
-            return;
+            var attackerProfile = manager.profile(attacker);
+            boolean flamingHandsActive = attackerProfile.activeBloodline() == BloodlineType.SPARTAN
+                    && attackerProfile.spartanFlamingHandsUntil() >= System.currentTimeMillis();
+            if (!flamingHandsActive) {
+                event.setCancelled(true);
+                manager.triggerSecondary(attacker);
+                return;
+            }
         }
 
         if (event.getEntity() instanceof Player damagedPlayer) {

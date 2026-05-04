@@ -474,14 +474,9 @@ public final class BloodlineManager {
         player.sendActionBar(Component.text("Fireball primed. Left click to launch.", NamedTextColor.GOLD));
     }
 
-    public boolean tryLaunchHeldSpartanFireball(Player player) {
+    public void launchSpartanFireball(Player player) {
         if (isBloodlineGameplayDisabled(player)) {
-            return false;
-        }
-        HeldFireballState state = heldFireballs.get(player.getUniqueId());
-        if (state == null || state.expiresAt() <= System.currentTimeMillis()) {
-            heldFireballs.remove(player.getUniqueId());
-            return false;
+            return;
         }
 
         int level = profile(player).activeLevel();
@@ -501,6 +496,19 @@ public final class BloodlineManager {
         heldFireballs.remove(player.getUniqueId());
         player.getWorld().playSound(player.getLocation(), Sound.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1F, 0.9F);
         player.getWorld().spawnParticle(Particle.FLAME, fireball.getLocation(), 20, 0.18, 0.18, 0.18, 0.02);
+    }
+
+    public boolean tryLaunchHeldSpartanFireball(Player player) {
+        if (isBloodlineGameplayDisabled(player)) {
+            return false;
+        }
+        HeldFireballState state = heldFireballs.get(player.getUniqueId());
+        if (state == null || state.expiresAt() <= System.currentTimeMillis()) {
+            heldFireballs.remove(player.getUniqueId());
+            return false;
+        }
+
+        launchSpartanFireball(player);
         return true;
     }
 

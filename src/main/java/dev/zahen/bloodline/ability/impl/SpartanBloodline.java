@@ -49,7 +49,7 @@ public final class SpartanBloodline extends AbstractBloodline {
             return;
         }
 
-        manager().prepareSpartanFireball(player);
+        manager().launchSpartanFireball(player);
         player.getWorld().spawnParticle(Particle.FLAME, player.getEyeLocation(), 18, 0.15, 0.15, 0.15, 0.01);
         player.getWorld().playSound(player.getLocation(), Sound.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1F, 1F);
         activated(player, "Ability Activated");

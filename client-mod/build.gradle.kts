@@ -3,7 +3,41 @@ plugins {
     `maven-publish`
 }
 
-version = property("mod_version") as String
+val repoRoot = projectDir.parentFile
+val versionFile = repoRoot.resolve("version.properties")
+val bumpScript = repoRoot.resolve("tools/bump-version.ps1")
+
+fun readProjectVersion(file: File): String {
+    val content = file.readText(Charsets.UTF_8).replace("\uFEFF", "")
+    return content.lineSequence()
+        .map(String::trim)
+        .firstOrNull { it.startsWith("project_version=") }
+        ?.substringAfter('=')
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: error("Missing project_version in ${file.absolutePath}")
+}
+
+val noBumpTasks = setOf("help", "tasks", "properties", "projects", "wrapper")
+val skipAutoVersionBump = gradle.startParameter.projectProperties.containsKey("skipAutoVersionBump")
+val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':').lowercase() }
+val shouldAutoBump = requestedTasks.isEmpty() || requestedTasks.any { it !in noBumpTasks }
+
+if (!skipAutoVersionBump && shouldAutoBump) {
+    val process = ProcessBuilder(
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        bumpScript.absolutePath,
+        "-RepoRoot",
+        repoRoot.absolutePath
+    ).inheritIO().start()
+    check(process.waitFor() == 0) { "Automatic version bump failed." }
+}
+
+version = readProjectVersion(versionFile)
 group = property("maven_group") as String
 
 base {

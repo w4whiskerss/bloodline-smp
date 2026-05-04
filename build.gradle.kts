@@ -5,8 +5,41 @@ plugins {
     java
 }
 
+val versionFile = projectDir.resolve("version.properties")
+val bumpScript = projectDir.resolve("tools/bump-version.ps1")
+
+fun readProjectVersion(file: File): String {
+    val content = file.readText(Charsets.UTF_8).replace("\uFEFF", "")
+    return content.lineSequence()
+        .map(String::trim)
+        .firstOrNull { it.startsWith("project_version=") }
+        ?.substringAfter('=')
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: error("Missing project_version in ${file.absolutePath}")
+}
+
+val noBumpTasks = setOf("help", "tasks", "properties", "projects", "wrapper")
+val skipAutoVersionBump = gradle.startParameter.projectProperties.containsKey("skipAutoVersionBump")
+val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':').lowercase() }
+val shouldAutoBump = requestedTasks.isEmpty() || requestedTasks.any { it !in noBumpTasks }
+
+if (!skipAutoVersionBump && shouldAutoBump) {
+    val process = ProcessBuilder(
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        bumpScript.absolutePath,
+        "-RepoRoot",
+        projectDir.absolutePath
+    ).inheritIO().start()
+    check(process.waitFor() == 0) { "Automatic version bump failed." }
+}
+
 group = "dev.zahen"
-version = "2.3.4"
+version = readProjectVersion(versionFile)
 
 val paperVersion = "1.21.11"
 val paperBuild = "69"

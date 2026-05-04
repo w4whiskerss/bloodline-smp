@@ -1,8 +1,8 @@
-<div align="center">
+﻿<div align="center">
 
 <img width="100%" alt="Bloodline SMP Banner" src="https://capsule-render.vercel.app/api?type=waving&height=220&color=0:120608,25:3b0a0f,55:7f1d1d,80:b91c1c,100:450a0a&text=Bloodline%20SMP&fontSize=56&fontColor=fff7f7&animation=fadeIn&fontAlignY=38&desc=PaperMC%20PvP%20Bloodline%20System&descAlignY=60&descSize=20" />
 
-[![version](https://img.shields.io/badge/version-2.3.4-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
+[![version](https://img.shields.io/badge/version-2.3.6-dc2626?style=flat-square)](https://github.com/w4whiskerss/bloodline-smp/releases)
 [![paper](https://img.shields.io/badge/paper-1.21.11-7f1d1d?style=flat-square)](https://papermc.io/)
 [![java](https://img.shields.io/badge/java-21-991b1b?style=flat-square)](https://adoptium.net/)
 [![fabric](https://img.shields.io/badge/client%20mod-fabric-b91c1c?style=flat-square)](https://fabricmc.net/)
@@ -169,3 +169,5 @@ Outputs:
 ## Credits
 
 Created by **w4whiskers**.
+
+
