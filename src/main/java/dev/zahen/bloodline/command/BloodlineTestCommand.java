@@ -27,9 +27,6 @@ public final class BloodlineTestCommand implements TabExecutor {
         }
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
-                    return true;
-                }
                 plugin.getTestItemsGui().open(player);
                 return true;
             }
@@ -49,9 +46,6 @@ public final class BloodlineTestCommand implements TabExecutor {
             case "items" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("Only players can open the test items panel.");
-                    return true;
-                }
-                if (plugin.getBloodlineManager().denyIfGameplayDisabled(player)) {
                     return true;
                 }
                 plugin.getTestItemsGui().open(player);

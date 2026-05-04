@@ -876,16 +876,7 @@ public final class BloodlineManager {
     }
 
     public boolean startObsidianCage(Player player) {
-        RayTraceResult trace = player.getWorld().rayTraceEntities(
-                player.getEyeLocation(),
-                player.getEyeLocation().getDirection(),
-                18.0D,
-                entity -> entity instanceof LivingEntity && entity != player
-        );
-        if (trace == null || !(trace.getHitEntity() instanceof LivingEntity target)) {
-            return false;
-        }
-        Location center = target.getLocation().getBlock().getLocation();
+        Location center = player.getLocation().getBlock().getLocation();
         List<TemporaryTerrainBlock> changed = new ArrayList<>();
         long durationTicks = 80L;
         for (int x = -1; x <= 1; x++) {
@@ -905,10 +896,10 @@ public final class BloodlineManager {
                 }
             }
         }
-        target.teleport(center.clone().add(0.5D, 0.1D, 0.5D));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, (int) durationTicks, 4, true, true, true));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, (int) durationTicks, 1, true, true, true));
-        target.getWorld().spawnParticle(Particle.PORTAL, target.getLocation().add(0, 1, 0), 40, 0.7, 1.2, 0.7, 0.03);
+        player.teleport(center.clone().add(0.5D, 0.1D, 0.5D));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) durationTicks, 1, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) durationTicks, 0, true, true, true));
+        player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation().add(0, 1, 0), 40, 0.7, 1.2, 0.7, 0.03);
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             restoreTemporaryTerrain(new EarthianWorldbreakerState(0L, center, 0D, changed));
             changed.forEach(block -> protectedCageBlocks.remove(BlockKey.of(block.location())));
@@ -1782,6 +1773,109 @@ public final class BloodlineManager {
         };
     }
 
+    private long cooldownDurationMillis(PlayerProfile profile, String key) {
+        if (key == null) {
+            return 0L;
+        }
+        int level = Math.max(1, profile.activeLevel());
+        return switch (key) {
+            case "aqua.water_dash" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.aqua.water-dash.cooldown-seconds", 45L),
+                    plugin.getConfig().getLong("bloodlines.aqua.water-dash.cooldown-reduction-per-level", 5L),
+                    15L,
+                    level
+            );
+            case "aqua.suffocation_curse" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.aqua.suffocation-curse.cooldown-seconds", 120L),
+                    plugin.getConfig().getLong("bloodlines.aqua.suffocation-curse.cooldown-reduction-per-level", 10L),
+                    40L,
+                    level
+            );
+            case "aqua.tidal_surge" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.cooldown-seconds", 180L),
+                    plugin.getConfig().getLong("bloodlines.aqua.tidal-surge.cooldown-reduction-per-level", 15L),
+                    60L,
+                    level
+            );
+            case "spartan.fireball" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.spartan.fireball.cooldown-seconds", 30L),
+                    plugin.getConfig().getLong("bloodlines.spartan.fireball.cooldown-reduction-per-level", 3L),
+                    15L,
+                    level
+            );
+            case "spartan.flaming_hands" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.spartan.flaming-hands.cooldown-seconds", 180L),
+                    plugin.getConfig().getLong("bloodlines.spartan.flaming-hands.cooldown-reduction-per-level", 10L),
+                    60L,
+                    level
+            );
+            case "spartan.hell_dominion" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.cooldown-seconds", 240L),
+                    plugin.getConfig().getLong("bloodlines.spartan.hell-dominion.cooldown-reduction-per-level", 15L),
+                    60L,
+                    level
+            );
+            case "spartan.flame_barrier" -> scaledCooldownMillis(180L, 8L, 60L, level);
+            case "spartan.inferno_rush" -> scaledCooldownMillis(300L, 10L, 90L, level);
+            case "earthian.ground_slam" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.earthian.ground-slam.cooldown-seconds", 45L),
+                    plugin.getConfig().getLong("bloodlines.earthian.ground-slam.cooldown-reduction-per-level", 5L),
+                    20L,
+                    level
+            );
+            case "earthian.root_prison" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.earthian.root-trap.cooldown-seconds", 180L),
+                    plugin.getConfig().getLong("bloodlines.earthian.root-trap.cooldown-reduction-per-level", 10L),
+                    60L,
+                    level
+            );
+            case "earthian.worldbreaker" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.cooldown-seconds", 240L),
+                    plugin.getConfig().getLong("bloodlines.earthian.worldbreaker.cooldown-reduction-per-level", 15L),
+                    60L,
+                    level
+            );
+            case "earthian.obsidian_cage" -> scaledCooldownMillis(240L, 10L, 75L, level);
+            case "earthian.consume" -> scaledCooldownMillis(300L, 12L, 90L, level);
+            case "voider.void_blink" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.voider.void-blink.cooldown-seconds", 30L),
+                    plugin.getConfig().getLong("bloodlines.voider.void-blink.cooldown-reduction-per-level", 3L),
+                    12L,
+                    level
+            );
+            case "voider.void_control" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.voider.void-control.cooldown-seconds", 180L),
+                    plugin.getConfig().getLong("bloodlines.voider.void-control.cooldown-reduction-per-level", 10L),
+                    45L,
+                    level
+            );
+            case "voider.darkened" -> scaledCooldownMillis(
+                    plugin.getConfig().getLong("bloodlines.voider.darkened.cooldown-seconds", 240L),
+                    plugin.getConfig().getLong("bloodlines.voider.darkened.cooldown-reduction-per-level", 10L),
+                    60L,
+                    level
+            );
+            case "voider.enderman_guard" -> scaledCooldownMillis(210L, 8L, 75L, level);
+            case "voider.void_collapse" -> scaledCooldownMillis(300L, 12L, 90L, level);
+            case "universal.rift_dash" -> scaledCooldownMillis(45L, 3L, 15L, level);
+            case "universal.blood_fusion" -> scaledCooldownMillis(240L, 10L, 60L, level);
+            case "universal.ascension" -> scaledCooldownMillis(360L, 15L, 90L, level);
+            default -> 0L;
+        };
+    }
+
+    private long scaledCooldownMillis(long baseSeconds, long reductionPerLevel, long minSeconds, int level) {
+        long cooldownSeconds = Math.max(minSeconds, baseSeconds - ((long) (level - 1) * reductionPerLevel));
+        return cooldownSeconds * 1000L;
+    }
+
+    private String iconKey(String key) {
+        if (key == null || !key.contains(".")) {
+            return "";
+        }
+        return key.substring(key.indexOf('.') + 1);
+    }
+
     private void updateFlightAvailability(Player player) {
         if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
             return;
@@ -2372,11 +2466,16 @@ public final class BloodlineManager {
         }
         PlayerProfile profile = profile(player);
         BloodlineType active = profile.activeBloodline();
-        long primaryRemaining = remainingCooldown(profile, primaryKey(active));
-        long secondaryRemaining = remainingCooldown(profile, secondaryKey(active));
-        long specialRemaining = remainingCooldown(profile, specialKey(active));
-        long fourthRemaining = remainingCooldown(profile, fourthKey(active));
-        long fifthRemaining = remainingCooldown(profile, fifthKey(active));
+        String primaryKey = primaryKey(active);
+        String secondaryKey = secondaryKey(active);
+        String specialKey = specialKey(active);
+        String fourthKey = fourthKey(active);
+        String fifthKey = fifthKey(active);
+        long primaryRemaining = remainingCooldown(profile, primaryKey);
+        long secondaryRemaining = remainingCooldown(profile, secondaryKey);
+        long specialRemaining = remainingCooldown(profile, specialKey);
+        long fourthRemaining = remainingCooldown(profile, fourthKey);
+        long fifthRemaining = remainingCooldown(profile, fifthKey);
 
         sendPayload(player, buildPacket(
                 "SYNC",
@@ -2392,11 +2491,21 @@ public final class BloodlineManager {
                 "specialName", specialAbilityLabel(active),
                 "fourthName", fourthAbilityLabel(active),
                 "fifthName", fifthAbilityLabel(active),
+                "primaryIcon", iconKey(primaryKey),
+                "secondaryIcon", iconKey(secondaryKey),
+                "specialIcon", iconKey(specialKey),
+                "fourthIcon", iconKey(fourthKey),
+                "fifthIcon", iconKey(fifthKey),
                 "primaryRemaining", Long.toString(primaryRemaining),
                 "secondaryRemaining", Long.toString(secondaryRemaining),
                 "specialRemaining", Long.toString(specialRemaining),
                 "fourthRemaining", Long.toString(fourthRemaining),
                 "fifthRemaining", Long.toString(fifthRemaining),
+                "primaryTotal", Long.toString(cooldownDurationMillis(profile, primaryKey)),
+                "secondaryTotal", Long.toString(cooldownDurationMillis(profile, secondaryKey)),
+                "specialTotal", Long.toString(cooldownDurationMillis(profile, specialKey)),
+                "fourthTotal", Long.toString(cooldownDurationMillis(profile, fourthKey)),
+                "fifthTotal", Long.toString(cooldownDurationMillis(profile, fifthKey)),
                 "secondaryCharges", "0",
                 "timerLabel", currentTimerLabel(active),
                 "timerRemaining", Long.toString(currentTimerRemaining(player, active)),

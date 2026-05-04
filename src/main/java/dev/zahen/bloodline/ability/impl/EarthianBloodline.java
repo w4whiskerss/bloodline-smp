@@ -127,7 +127,7 @@ public final class EarthianBloodline extends AbstractBloodline {
         }
         if (!manager().startObsidianCage(player)) {
             profile(player).clearCooldown(OBSIDIAN_CAGE_KEY);
-            manager().showPopup(player, "No target for Obsidian Cage.", NamedTextColor.RED);
+            manager().showPopup(player, "Could not form Obsidian Cage here.", NamedTextColor.RED);
             return;
         }
         activated(player, "Obsidian Cage");
