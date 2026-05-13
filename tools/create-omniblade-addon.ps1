@@ -1,5 +1,5 @@
-$root = "D:\Zahen\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-local\Blades Of Majestica OmniBlade Addon"
-$sourceRoot = "D:\Zahen\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-source\Blades Of Majestica"
+﻿$root = "D:\Whiskers\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-local\Blades Of Majestica OmniBlade Addon"
+$sourceRoot = "D:\Whiskers\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-source\Blades Of Majestica"
 $itemFile = Join-Path $sourceRoot "assets\minecraft\items\netherite_sword.json"
 
 New-Item -ItemType Directory -Force -Path (Join-Path $root "assets\minecraft\items") | Out-Null
@@ -44,7 +44,7 @@ if ($content -notmatch '"when": "OmniBlade"') {
 
 Set-Content -Path (Join-Path $root "assets\minecraft\items\netherite_sword.json") -Value $content -Encoding UTF8
 
-$zipPath = "D:\Zahen\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-local\Blades-Of-Majestica-OmniBlade-Addon.zip"
+$zipPath = "D:\Whiskers\dev-tech\new\Minecraft custom mods\Bloodline SMP\resource-pack-local\Blades-Of-Majestica-OmniBlade-Addon.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }

@@ -1,5 +1,6 @@
 {
-  "key.categories.bloodline.aaa_bloodlinesmp": "BloodlineSMP",
+  "key.categories.bloodline.keybinds": "Bloodline Keybinds",
+  "key.category.bloodline.keybinds": "Bloodline Keybinds",
   "key.categories.bloodlinesmp": "BloodlineSMP",
   "key.categories.bloodlinesmp.keybinds": "BloodlineSMP",
   "key.category.bloodlinesmp.keybinds": "BloodlineSMP",
@@ -7,5 +8,6 @@
   "key.bloodline.secondary": "Ability 2",
   "key.bloodline.special": "Ability 3",
   "key.bloodline.fourth": "Ability 4",
-  "key.bloodline.fifth": "Ability 5"
+  "key.bloodline.fifth": "Ability 5",
+  "key.bloodline.configure_server": "Set Auto Handshake Server"
 }

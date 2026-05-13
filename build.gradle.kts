@@ -1,4 +1,4 @@
-import java.net.URI
+﻿import java.net.URI
 import java.net.URL
 
 plugins {
@@ -38,7 +38,7 @@ if (!skipAutoVersionBump && shouldAutoBump) {
     check(process.waitFor() == 0) { "Automatic version bump failed." }
 }
 
-group = "dev.zahen"
+group = "dev.whiskers"
 version = readProjectVersion(versionFile)
 
 val paperVersion = "1.21.11"

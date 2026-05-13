@@ -16,9 +16,9 @@ Default hotkeys:
 - `N` -> Special
 
 Requirements:
-- Minecraft `1.21.11`
+- Minecraft `1.20` through `1.21.11` release builds only
 - Fabric Loader `0.18.1`
-- Fabric API `0.141.1+1.21.11`
+- Fabric API matching your Minecraft release
 - Java `21`
 
 Build:
@@ -31,7 +31,7 @@ Output:
 - `client-mod/build/libs/BloodLine-Client-2.3.4.jar`
 
 Install:
-1. Install Fabric for Minecraft `1.21.11`.
+1. Install Fabric for any release from Minecraft `1.20` through `1.21.11`.
 2. Put the built mod jar in your client `mods` folder.
 3. Put the matching Fabric API jar in the same `mods` folder.
 4. Join the server with `BloodLine Server 2.3.4` installed.

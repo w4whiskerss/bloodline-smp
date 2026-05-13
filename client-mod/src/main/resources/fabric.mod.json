@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "id": "bloodline_hotkeys",
   "version": "${version}",
@@ -13,12 +13,12 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "dev.zahen.bloodlinehotkeys.BloodlineHotkeysClient"
+      "dev.whiskers.bloodlinehotkeys.BloodlineHotkeysClient"
     ]
   },
   "depends": {
     "fabricloader": ">=0.18.4",
-    "minecraft": "~1.21.11",
+    "minecraft": ">=1.20 <=1.21.11",
     "java": ">=21",
     "fabric-api": "*"
   }

@@ -45,6 +45,8 @@ client-mod:
 
 drops:
   trait-potion-chance: 0.25
+  blood-drop-chance: 0.08
+  mob-blood-drop-chance: 0.025
 
 bloodlines:
   aqua:

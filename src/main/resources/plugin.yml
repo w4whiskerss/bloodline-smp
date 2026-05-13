@@ -1,7 +1,7 @@
-name: BloodlineSMP
+﻿name: BloodlineSMP
 version: 2.3.4
-main: dev.zahen.bloodline.BloodlinePlugin
-api-version: '1.21'
+main: dev.whiskers.bloodline.BloodlinePlugin
+api-version: '1.20'
 author: w4whiskers
 commands:
   bloodline:
@@ -30,9 +30,13 @@ commands:
     description: Triggers your fifth bloodline ability
     usage: /ability5
     aliases: [abilityfive]
-  bloodlinemod:
+  bloodlinehandshake:
     description: Internal client hotkey handshake
-    usage: /bloodlinemod
+    usage: /bloodlinehandshake
+    aliases: [bloodlinemod]
+  blooddomainwand:
+    description: Gives or saves the Blood Domain Wand
+    usage: /blooddomainwand [save|clear] [bloodline]
   bloodlinereload:
     description: Reloads BloodlineSMP config
     usage: /bloodlinereload
