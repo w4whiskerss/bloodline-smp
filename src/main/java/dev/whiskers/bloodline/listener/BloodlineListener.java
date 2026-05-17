@@ -39,6 +39,7 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 public final class BloodlineListener implements Listener {
@@ -269,23 +270,32 @@ public final class BloodlineListener implements Listener {
             return;
         }
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (plugin.getAdminPanelGui().isListTitle(title) || plugin.getAdminPanelGui().isEditTitle(title) || plugin.getAdminPanelGui().isDebugTitle(title)) {
-            event.setCancelled(true);
-            plugin.getAdminPanelGui().handleClick(player, event.getClickedInventory(), event.getSlot());
+        boolean adminMenu = plugin.getAdminPanelGui().isListTitle(title)
+                || plugin.getAdminPanelGui().isEditTitle(title)
+                || plugin.getAdminPanelGui().isDebugTitle(title);
+        boolean testMenu = plugin.getTestItemsGui().isTitle(title);
+        boolean bloodlineMenu = title.equals(BloodlineGui.TITLE);
+        if (!adminMenu && !testMenu && !bloodlineMenu) {
             return;
         }
-        if (plugin.getTestItemsGui().isTitle(title)) {
-            event.setCancelled(true);
+
+        event.setCancelled(true);
+        Inventory clickedInventory = event.getClickedInventory();
+        if (clickedInventory == null || clickedInventory != event.getView().getTopInventory()) {
+            return;
+        }
+
+        if (adminMenu) {
+            plugin.getAdminPanelGui().handleClick(player, clickedInventory, event.getSlot());
+            return;
+        }
+        if (testMenu) {
             plugin.getTestItemsGui().handleClick(player, event.getSlot());
-            return;
-        }
-        if (!title.equals(BloodlineGui.TITLE)) {
             return;
         }
         if (manager.isBloodlineGameplayDisabled(player)) {
             return;
         }
-        event.setCancelled(true);
 
         ItemStack current = event.getCurrentItem();
         if (current == null || current.getType() == Material.AIR) {
